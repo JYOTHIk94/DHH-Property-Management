@@ -1,0 +1,715 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:property_name",
+ "creation": "2026-04-06 13:22:38.340491",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_camt",
+  "date",
+  "property_name",
+  "property_type",
+  "column_break_65or",
+  "status",
+  "details_section",
+  "bedrooms",
+  "area",
+  "column_break_nafq",
+  "maximum_no_of_guests",
+  "base_price_per_night",
+  "reference_section",
+  "opportunity",
+  "column_break_e3ys",
+  "property_onboarding_request",
+  "utilities_tab",
+  "dewa_section",
+  "premise_number_dewa",
+  "registered_email_dewa",
+  "paid_by_dewa",
+  "column_break_b3vh",
+  "account_number_dewa",
+  "registered_phone_dewa",
+  "notes_dewa",
+  "column_break_1xyn",
+  "username_dewa",
+  "registered_name_dewa",
+  "dewa_bill_issue_date",
+  "column_break_a3pg",
+  "password_dewa",
+  "status_dewa",
+  "internettv_section",
+  "provider_internettv",
+  "password_internettv",
+  "wifi_router_username_internettv",
+  "notes_internet",
+  "column_break_nuq7",
+  "account_number_internettv",
+  "registered_email_internettv",
+  "wifi_router_password_internettv",
+  "internet_bill_issue_date",
+  "column_break_ys5o",
+  "landline_number_internettv",
+  "registered_phone_internettv",
+  "paid_by_internettv",
+  "column_break_3jb7",
+  "username_internettv",
+  "registered_name_internettv",
+  "status_internettv",
+  "chiller_section",
+  "provider_chiller",
+  "account_number_chiller",
+  "registered_name_chiller",
+  "column_break_mynk",
+  "owner_email_chiller",
+  "paid_by_chiller",
+  "status_chiller",
+  "column_break_lljt",
+  "username_chiller",
+  "registered_email_chiller",
+  "notes_chiller",
+  "column_break_1328",
+  "password_chiller",
+  "registered_phone_chiller",
+  "chiller_bill_issue_date",
+  "gas_section",
+  "type_gas",
+  "username_gas",
+  "registered_phone_gas",
+  "gas_bill_issue_date",
+  "column_break_pptn",
+  "provider_name_gas",
+  "password_gas",
+  "registered_name_gas",
+  "column_break_ouwt",
+  "provider_phone_gas",
+  "paid_by_gas",
+  "status_gas",
+  "column_break_dgpa",
+  "contract_no",
+  "registered_email_gas",
+  "notes_gas",
+  "service_charge_section",
+  "payment_status_service_charge",
+  "service_charge_bill_issue_date",
+  "column_break_oe9r",
+  "landlord_received_a_service_charge_invoice",
+  "day_of_the_month_service_charge_billing",
+  "column_break_onpd",
+  "service_charge_attachments",
+  "was_the_property_handed_over_in_the_last_3_months",
+  "column_break_gloo",
+  "notes_service_charge"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_camt",
+   "fieldtype": "Section Break",
+   "label": "Basic Details"
+  },
+  {
+   "default": "Today",
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Date"
+  },
+  {
+   "fieldname": "property_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Property Name",
+   "unique": 1
+  },
+  {
+   "fieldname": "column_break_65or",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Pending",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Status",
+   "options": "Pending\nActive\nInactive"
+  },
+  {
+   "fieldname": "reference_section",
+   "fieldtype": "Section Break",
+   "hidden": 1,
+   "label": "Reference"
+  },
+  {
+   "fieldname": "opportunity",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Opportunity",
+   "options": "Opportunity"
+  },
+  {
+   "fieldname": "column_break_e3ys",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "property_onboarding_request",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Property Onboarding Request",
+   "options": "Property Onboarding Request"
+  },
+  {
+   "fieldname": "property_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Property Type",
+   "options": "Property Type"
+  },
+  {
+   "fieldname": "bedrooms",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Bedrooms"
+  },
+  {
+   "fieldname": "area",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Area"
+  },
+  {
+   "fieldname": "utilities_tab",
+   "fieldtype": "Tab Break",
+   "label": "Utilities"
+  },
+  {
+   "fieldname": "dewa_section",
+   "fieldtype": "Section Break",
+   "label": "DEWA"
+  },
+  {
+   "fieldname": "premise_number_dewa",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Premise Number (DEWA)"
+  },
+  {
+   "fieldname": "registered_email_dewa",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Registered Email (DEWA)"
+  },
+  {
+   "fieldname": "paid_by_dewa",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Paid by (DEWA)"
+  },
+  {
+   "fieldname": "column_break_b3vh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "account_number_dewa",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Account Number (DEWA)"
+  },
+  {
+   "fieldname": "registered_phone_dewa",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Registered Phone (DEWA)"
+  },
+  {
+   "fieldname": "notes_dewa",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Notes (DEWA)"
+  },
+  {
+   "fieldname": "column_break_1xyn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "username_dewa",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Username (DEWA)"
+  },
+  {
+   "fieldname": "registered_name_dewa",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Registered Name (DEWA)"
+  },
+  {
+   "fieldname": "dewa_bill_issue_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "DEWA Bill Issue Date"
+  },
+  {
+   "fieldname": "column_break_a3pg",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "password_dewa",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Password (DEWA)"
+  },
+  {
+   "fieldname": "status_dewa",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Status (DEWA)"
+  },
+  {
+   "fieldname": "internettv_section",
+   "fieldtype": "Section Break",
+   "label": "Internet/TV"
+  },
+  {
+   "fieldname": "provider_internettv",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Provider (Internet/TV)"
+  },
+  {
+   "fieldname": "password_internettv",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Password (Internet/TV)"
+  },
+  {
+   "fieldname": "wifi_router_username_internettv",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Wi-fi Router Username (Internet/TV)"
+  },
+  {
+   "fieldname": "notes_internet",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Notes (Internet)"
+  },
+  {
+   "fieldname": "column_break_nuq7",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "account_number_internettv",
+   "fieldtype": "Data",
+   "label": "Account Number (Internet/TV)"
+  },
+  {
+   "fieldname": "registered_email_internettv",
+   "fieldtype": "Data",
+   "label": "Registered Email (Internet/TV)"
+  },
+  {
+   "fieldname": "internet_bill_issue_date",
+   "fieldtype": "Date",
+   "label": "Internet Bill Issue Date"
+  },
+  {
+   "fieldname": "wifi_router_password_internettv",
+   "fieldtype": "Data",
+   "label": "Wi-fi Router Password (Internet/TV)"
+  },
+  {
+   "fieldname": "column_break_ys5o",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "landline_number_internettv",
+   "fieldtype": "Data",
+   "label": "Landline Number (Internet/TV)"
+  },
+  {
+   "fieldname": "registered_phone_internettv",
+   "fieldtype": "Data",
+   "label": "Registered Phone (Internet/TV)"
+  },
+  {
+   "fieldname": "paid_by_internettv",
+   "fieldtype": "Data",
+   "label": "Paid by (Internet/TV)"
+  },
+  {
+   "fieldname": "column_break_3jb7",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "username_internettv",
+   "fieldtype": "Data",
+   "label": "Username (Internet/TV)"
+  },
+  {
+   "fieldname": "registered_name_internettv",
+   "fieldtype": "Data",
+   "label": "Registered Name (Internet/TV)"
+  },
+  {
+   "fieldname": "status_internettv",
+   "fieldtype": "Data",
+   "label": "Status (Internet/TV)"
+  },
+  {
+   "fieldname": "chiller_section",
+   "fieldtype": "Section Break",
+   "label": "Chiller"
+  },
+  {
+   "fieldname": "provider_chiller",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Provider (Chiller)"
+  },
+  {
+   "fieldname": "account_number_chiller",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Account Number (Chiller)"
+  },
+  {
+   "fieldname": "registered_name_chiller",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Registered Name (Chiller)"
+  },
+  {
+   "fieldname": "column_break_mynk",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "owner_email_chiller",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Owner Email (Chiller)"
+  },
+  {
+   "fieldname": "paid_by_chiller",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Paid by (Chiller)"
+  },
+  {
+   "fieldname": "status_chiller",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Status (Chiller)"
+  },
+  {
+   "fieldname": "column_break_lljt",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "username_chiller",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Username (Chiller)"
+  },
+  {
+   "fieldname": "registered_email_chiller",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Registered Email (Chiller)"
+  },
+  {
+   "fieldname": "notes_chiller",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Notes (Chiller)"
+  },
+  {
+   "fieldname": "column_break_1328",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "password_chiller",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Password (Chiller)"
+  },
+  {
+   "fieldname": "registered_phone_chiller",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Registered Phone (Chiller)"
+  },
+  {
+   "fieldname": "chiller_bill_issue_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Chiller Bill Issue Date"
+  },
+  {
+   "fieldname": "gas_section",
+   "fieldtype": "Section Break",
+   "label": "GAS"
+  },
+  {
+   "fieldname": "type_gas",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Type (GAS)"
+  },
+  {
+   "fieldname": "username_gas",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Username (GAS)"
+  },
+  {
+   "fieldname": "registered_phone_gas",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Registered Phone (GAS)"
+  },
+  {
+   "fieldname": "gas_bill_issue_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Gas Bill Issue Date"
+  },
+  {
+   "fieldname": "column_break_pptn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "provider_name_gas",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Provider Name (Gas)"
+  },
+  {
+   "fieldname": "password_gas",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Password (GAS)"
+  },
+  {
+   "fieldname": "registered_name_gas",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Registered Name (GAS)"
+  },
+  {
+   "fieldname": "column_break_ouwt",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "provider_phone_gas",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Provider Phone (Gas)"
+  },
+  {
+   "fieldname": "paid_by_gas",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Paid by (GAS)"
+  },
+  {
+   "fieldname": "status_gas",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Status (GAS)"
+  },
+  {
+   "fieldname": "column_break_dgpa",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "contract_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Contract No"
+  },
+  {
+   "fieldname": "registered_email_gas",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Registered Email (GAS)"
+  },
+  {
+   "fieldname": "notes_gas",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Notes (GAS)"
+  },
+  {
+   "fieldname": "service_charge_section",
+   "fieldtype": "Section Break",
+   "label": "Service Charge"
+  },
+  {
+   "fieldname": "payment_status_service_charge",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Payment Status (Service Charge)"
+  },
+  {
+   "fieldname": "service_charge_bill_issue_date",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Service Charge Bill Issue Date"
+  },
+  {
+   "fieldname": "column_break_oe9r",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "landlord_received_a_service_charge_invoice",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Landlord received a service charge invoice?"
+  },
+  {
+   "fieldname": "day_of_the_month_service_charge_billing",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Day of the Month (Service Charge Billing)"
+  },
+  {
+   "fieldname": "column_break_onpd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "service_charge_attachments",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Service Charge Attachments"
+  },
+  {
+   "fieldname": "notes_service_charge",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Notes (Service Charge)"
+  },
+  {
+   "fieldname": "column_break_gloo",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "was_the_property_handed_over_in_the_last_3_months",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Was the property handed over in the last 3 months"
+  },
+  {
+   "fieldname": "details_section",
+   "fieldtype": "Section Break",
+   "label": "Details"
+  },
+  {
+   "fieldname": "column_break_nafq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "maximum_no_of_guests",
+   "fieldtype": "Int",
+   "label": "Maximum No Of Guests"
+  },
+  {
+   "fieldname": "base_price_per_night",
+   "fieldtype": "Currency",
+   "label": "Base Price Per Night"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [
+  {
+   "group": "Property Vacancy Log",
+   "link_doctype": "Property  Vacancy Log",
+   "link_fieldname": "property"
+  },
+  {
+   "group": "Reservation",
+   "link_doctype": "Reservation",
+   "link_fieldname": "property_id"
+  }
+ ],
+ "modified": "2026-04-16 19:28:58.028405",
+ "modified_by": "Administrator",
+ "module": "Property Management",
+ "name": "Property",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

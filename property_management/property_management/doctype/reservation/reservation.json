@@ -1,0 +1,374 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "RES-.######",
+ "creation": "2026-04-13 13:57:44.698468",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_reservation_details",
+  "property_id",
+  "reservation_booking_date",
+  "reservation_type",
+  "column_break_oawg",
+  "reservation_link",
+  "reservation_manager",
+  "no_of_nights",
+  "column_break_y7nx",
+  "reservation_status",
+  "reservation_check_in",
+  "reservation_check_out",
+  "section_guest_details",
+  "first_name",
+  "last_name",
+  "email_id",
+  "phone_number",
+  "column_break_lk0h",
+  "guest_type",
+  "no_of_adults",
+  "no_of_children",
+  "guest",
+  "section_financial_details",
+  "reservation_item",
+  "reservation_management_fee",
+  "total_amount",
+  "column_break_ergk",
+  "reservation_sd",
+  "payment_status",
+  "column_break_7sro",
+  "mode_of_payment",
+  "amount_paid_by_guest",
+  "reservation_tax",
+  "reservation_paid_commission",
+  "amended_from",
+  "reference_section",
+  "sales_order",
+  "sales_invoice",
+  "column_break_6z2g",
+  "payment_entry"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_reservation_details",
+   "fieldtype": "Section Break",
+   "label": "Reservation Details"
+  },
+  {
+   "fieldname": "property_id",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Property",
+   "options": "Property",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_oawg",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reservation_booking_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Booking Date"
+  },
+  {
+   "fieldname": "reservation_type",
+   "fieldtype": "Select",
+   "label": "Reservation Type",
+   "options": "Booking\nInquiry\nBlocked"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "reservation_status",
+   "fieldtype": "Select",
+   "in_filter": 1,
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "Reservation Status",
+   "options": "Draft\nConfirmed\nChecked In\nChecked Out\nCancelled"
+  },
+  {
+   "fieldname": "no_of_nights",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "No of Nights"
+  },
+  {
+   "fieldname": "column_break_y7nx",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reservation_check_in",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Check In",
+   "reqd": 1
+  },
+  {
+   "fieldname": "reservation_check_out",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Check Out",
+   "reqd": 1
+  },
+  {
+   "fieldname": "reservation_link",
+   "fieldtype": "Data",
+   "label": "Reservation Link"
+  },
+  {
+   "fieldname": "section_guest_details",
+   "fieldtype": "Section Break",
+   "label": "Guest Details"
+  },
+  {
+   "fieldname": "guest_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Guest Type",
+   "options": "Tourist\nCorporate\nOwner"
+  },
+  {
+   "fieldname": "no_of_adults",
+   "fieldtype": "Int",
+   "in_filter": 1,
+   "in_list_view": 1,
+   "label": "No of Adults"
+  },
+  {
+   "fieldname": "no_of_children",
+   "fieldtype": "Int",
+   "in_filter": 1,
+   "in_list_view": 1,
+   "label": "No of Children"
+  },
+  {
+   "fieldname": "section_financial_details",
+   "fieldtype": "Section Break",
+   "label": "Payment Details"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "reservation_item",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Booking Amount"
+  },
+  {
+   "fieldname": "reservation_tax",
+   "fieldtype": "Currency",
+   "hidden": 1,
+   "label": "Tax"
+  },
+  {
+   "fieldname": "column_break_ergk",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "reservation_sd",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Security Deposit"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "reservation_paid_commission",
+   "fieldtype": "Currency",
+   "hidden": 1,
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Paid Commission"
+  },
+  {
+   "fieldname": "column_break_7sro",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "reservation_management_fee",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Service Charge"
+  },
+  {
+   "allow_on_submit": 1,
+   "fetch_from": "sales_invoice.status",
+   "fieldname": "payment_status",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Payment Status"
+  },
+  {
+   "fieldname": "column_break_lk0h",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reservation_manager",
+   "fieldtype": "Link",
+   "label": "Reservation Manager",
+   "options": "User"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Reservation",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "first_name",
+   "fieldtype": "Data",
+   "label": "First Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "last_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Last Name"
+  },
+  {
+   "fieldname": "email_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Email Id"
+  },
+  {
+   "fieldname": "phone_number",
+   "fieldtype": "Phone",
+   "label": "Phone Number",
+   "reqd": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "guest",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Guest",
+   "options": "Customer",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reference_section",
+   "fieldtype": "Section Break",
+   "label": "Reference"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "sales_order",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Sales Order",
+   "options": "Sales Order"
+  },
+  {
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "label": "Sales Invoice",
+   "options": "Sales Invoice"
+  },
+  {
+   "fieldname": "column_break_6z2g",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "payment_entry",
+   "fieldtype": "Link",
+   "label": "Payment Entry",
+   "options": "Payment Entry"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "mode_of_payment",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Mode Of Payment",
+   "options": "Mode of Payment"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "amount_paid_by_guest",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Amount Paid By Guest"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "total_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Total Amount"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-04-16 19:38:29.185824",
+ "modified_by": "Administrator",
+ "module": "Property Management",
+ "name": "Reservation",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "select": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Receptionist",
+   "select": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "track_seen": 1
+}

@@ -1,0 +1,75 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "PVL-.######",
+ "creation": "2026-04-16 18:41:20.365113",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_kytg",
+  "property",
+  "maximum_no_of_guests",
+  "column_break_orhk",
+  "occupied_guests",
+  "available"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_kytg",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "property",
+   "fieldtype": "Link",
+   "label": "Property",
+   "options": "Property"
+  },
+  {
+   "fieldname": "maximum_no_of_guests",
+   "fieldtype": "Int",
+   "label": "Maximum No Of Guests"
+  },
+  {
+   "fieldname": "occupied_guests",
+   "fieldtype": "Int",
+   "label": "Occupied Guests"
+  },
+  {
+   "fieldname": "available",
+   "fieldtype": "Int",
+   "label": "Available "
+  },
+  {
+   "fieldname": "column_break_orhk",
+   "fieldtype": "Column Break"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-04-16 18:46:12.299902",
+ "modified_by": "Administrator",
+ "module": "Property Management",
+ "name": "Property Vacancy Log",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
