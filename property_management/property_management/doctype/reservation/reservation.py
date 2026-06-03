@@ -43,6 +43,9 @@ class Reservation(Document):
         )
 
     def validate_check_in_date(self):
+        # Reservations synced from Guesty may have past check-in dates (historical bookings).
+        if self.flags.get("from_guesty"):
+            return
         if self.reservation_check_in and getdate(self.reservation_check_in) < getdate(today()):
             frappe.throw("Check-in date must be today or a future date.")
 
@@ -51,6 +54,10 @@ class Reservation(Document):
             frappe.throw("Check-out date must be after the check-in date.")
 
     def calculate_booking_amount(self):
+        # For Guesty-synced reservations, Guesty is authoritative for money — keep the
+        # amount we mapped from the reservation instead of recomputing from the property.
+        if self.flags.get("from_guesty"):
+            return
         if not self.property_id:
             return
 
@@ -155,12 +162,22 @@ class Reservation(Document):
             self.guest = customer_name
             return customer_name
 
+        customer_group = (
+            frappe.db.get_single_value("Selling Settings", "customer_group")
+            or frappe.db.get_value("Customer Group", {"is_group": 0}, "name")
+            or "Individual"
+        )
+        territory = (
+            frappe.db.get_single_value("Selling Settings", "territory")
+            or "All Territories"
+        )
+
         customer = frappe.get_doc({
             "doctype": "Customer",
             "customer_name": f"{self.first_name} {self.last_name or ''}".strip(),
             "customer_type": "Individual",
-            "customer_group": "All Customer Groups",
-            "territory": "All Territories",
+            "customer_group": customer_group,
+            "territory": territory,
             "email_id": self.email_id,
             "mobile_no": self.phone_number
         })

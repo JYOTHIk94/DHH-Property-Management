@@ -1,0 +1,195 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-06-02 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_conn",
+  "enabled",
+  "client_id",
+  "client_secret",
+  "column_break_conn",
+  "token_url",
+  "base_url",
+  "section_break_token",
+  "access_token",
+  "column_break_token",
+  "token_expiry",
+  "section_break_sync",
+  "sync_listings",
+  "sync_reservations",
+  "default_property_type",
+  "column_break_sync",
+  "last_listing_sync",
+  "last_reservation_sync",
+  "section_break_webhook",
+  "public_base_url",
+  "webhook_secret",
+  "column_break_webhook",
+  "webhook_id",
+  "last_webhook_at"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_conn",
+   "fieldtype": "Section Break",
+   "label": "Connection"
+  },
+  {
+   "default": "0",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "fieldname": "client_id",
+   "fieldtype": "Data",
+   "label": "Client ID"
+  },
+  {
+   "fieldname": "client_secret",
+   "fieldtype": "Password",
+   "label": "Client Secret"
+  },
+  {
+   "fieldname": "column_break_conn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "https://open-api.guesty.com/oauth2/token",
+   "fieldname": "token_url",
+   "fieldtype": "Data",
+   "label": "Token URL"
+  },
+  {
+   "default": "https://open-api.guesty.com/v1/",
+   "fieldname": "base_url",
+   "fieldtype": "Data",
+   "label": "Base API URL"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_token",
+   "fieldtype": "Section Break",
+   "label": "Token Cache (read-only)"
+  },
+  {
+   "description": "Cached automatically. Do not edit.",
+   "fieldname": "access_token",
+   "fieldtype": "Password",
+   "label": "Access Token",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_token",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "token_expiry",
+   "fieldtype": "Datetime",
+   "label": "Token Expiry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_sync",
+   "fieldtype": "Section Break",
+   "label": "Sync Options"
+  },
+  {
+   "default": "1",
+   "fieldname": "sync_listings",
+   "fieldtype": "Check",
+   "label": "Sync Listings → Property"
+  },
+  {
+   "default": "1",
+   "fieldname": "sync_reservations",
+   "fieldtype": "Check",
+   "label": "Sync Reservations → Reservation"
+  },
+  {
+   "description": "Used when a Guesty listing has no property type.",
+   "fieldname": "default_property_type",
+   "fieldtype": "Link",
+   "label": "Default Property Type",
+   "options": "Property Type"
+  },
+  {
+   "fieldname": "column_break_sync",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_listing_sync",
+   "fieldtype": "Datetime",
+   "label": "Last Listing Sync",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_reservation_sync",
+   "fieldtype": "Datetime",
+   "label": "Last Reservation Sync",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_webhook",
+   "fieldtype": "Section Break",
+   "label": "Webhooks (Real-time)"
+  },
+  {
+   "description": "Public HTTPS origin that Guesty can reach, e.g. your ngrok URL https://abc123.ngrok-free.app (no trailing path).",
+   "fieldname": "public_base_url",
+   "fieldtype": "Data",
+   "label": "Public Base URL"
+  },
+  {
+   "description": "Shared secret embedded in the webhook URL to authenticate incoming calls. Click 'Generate Secret'.",
+   "fieldname": "webhook_secret",
+   "fieldtype": "Password",
+   "label": "Webhook Secret"
+  },
+  {
+   "fieldname": "column_break_webhook",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "ID of the webhook registered with Guesty.",
+   "fieldname": "webhook_id",
+   "fieldtype": "Data",
+   "label": "Registered Webhook ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_webhook_at",
+   "fieldtype": "Datetime",
+   "label": "Last Webhook Received",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-06-02 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Property Management",
+ "name": "Guesty Settings",
+ "naming_rule": "",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

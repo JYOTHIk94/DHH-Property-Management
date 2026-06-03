@@ -12,6 +12,7 @@
   "reservation_type",
   "column_break_oawg",
   "reservation_link",
+  "guesty_id",
   "reservation_manager",
   "no_of_nights",
   "column_break_y7nx",
@@ -119,6 +120,15 @@
    "fieldname": "reservation_link",
    "fieldtype": "Data",
    "label": "Reservation Link"
+  },
+  {
+   "description": "Guesty reservation _id. Set automatically by the Guesty sync; do not edit.",
+   "fieldname": "guesty_id",
+   "fieldtype": "Data",
+   "label": "Guesty ID",
+   "no_copy": 1,
+   "read_only": 1,
+   "unique": 1
   },
   {
    "fieldname": "section_guest_details",

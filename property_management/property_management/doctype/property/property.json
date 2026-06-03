@@ -12,6 +12,7 @@
   "property_type",
   "column_break_65or",
   "status",
+  "guesty_id",
   "details_section",
   "bedrooms",
   "area",
@@ -135,6 +136,15 @@
    "in_preview": 1,
    "label": "Status",
    "options": "Pending\nActive\nInactive"
+  },
+  {
+   "description": "Guesty listing _id. Set automatically by the Guesty sync; do not edit.",
+   "fieldname": "guesty_id",
+   "fieldtype": "Data",
+   "label": "Guesty ID",
+   "no_copy": 1,
+   "read_only": 1,
+   "unique": 1
   },
   {
    "fieldname": "reference_section",
