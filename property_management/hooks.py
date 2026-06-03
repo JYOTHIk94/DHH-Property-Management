@@ -148,23 +148,15 @@ app_license = "mit"
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"property_management.tasks.all"
-# 	],
-# 	"daily": [
-# 		"property_management.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"property_management.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"property_management.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"property_management.tasks.monthly"
-# 	],
-# }
+# Real-time sync is driven by Guesty webhooks (see guesty/webhook.py). These
+# scheduled pulls are only a once-daily reconciliation backstop that catches
+# anything a dropped/failed webhook delivery missed.
+scheduler_events = {
+	"daily": [
+		"property_management.property_management.guesty.sync_listings.run",
+		"property_management.property_management.guesty.sync_reservations.run",
+	],
+}
 
 # Testing
 # -------

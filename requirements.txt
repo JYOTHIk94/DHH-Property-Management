@@ -1,0 +1,2 @@
+# frappe is installed and managed by bench; do not pin it here.
+phonenumbers
