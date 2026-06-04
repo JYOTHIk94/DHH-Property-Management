@@ -4,7 +4,6 @@
 import frappe
 from frappe.model.document import Document
 from frappe.utils import getdate, today, nowdate, flt
-from erpnext.selling.doctype.sales_order.sales_order import make_sales_invoice
 
 
 class Reservation(Document):
@@ -192,6 +191,10 @@ class Reservation(Document):
 
         if self.sales_invoice:
             return
+
+        # Imported lazily so the module loads even where ERPNext isn't present yet
+        # (e.g. Frappe Cloud build/validation before erpnext is installed).
+        from erpnext.selling.doctype.sales_order.sales_order import make_sales_invoice
 
         sales_invoice = make_sales_invoice(self.sales_order)
 
