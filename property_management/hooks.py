@@ -8,7 +8,12 @@ app_license = "mit"
 # Apps
 # ------------------
 
-# required_apps = []
+# This app depends on ERPNext: the Reservation controller imports
+# erpnext.selling...make_sales_invoice and links to Customer / Sales Order /
+# Sales Invoice / Payment Entry / Mode of Payment. Declaring it here makes
+# Frappe Cloud (and `bench get-app`) install ERPNext first, instead of failing
+# on `import erpnext`.
+required_apps = ["erpnext"]
 
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [
