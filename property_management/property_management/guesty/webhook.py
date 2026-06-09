@@ -56,6 +56,13 @@ def receive(secret=None):
 	if not settings.enabled:
 		return _reject(503, "Guesty integration disabled")
 
+	# Guesty POSTs with Content-Type: application/json, so Frappe builds
+	# form_dict from the JSON body and drops the query string — the `secret`
+	# kwarg arrives as None. Pull it straight from the query args, which are
+	# available regardless of body/content-type (and for GET too).
+	if secret is None and frappe.request:
+		secret = frappe.request.args.get("secret")
+
 	if not _secret_ok(settings, secret):
 		# Don't leak which part failed; log for the operator.
 		frappe.log_error("Rejected Guesty webhook: bad/missing secret", "Guesty webhook")
