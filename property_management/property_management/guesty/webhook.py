@@ -88,10 +88,13 @@ def receive(secret=None):
 	# under 15s. We pass the object Guesty already sent so processing can proceed
 	# even if the re-fetch fails (e.g. token rate-limited). Idempotent on
 	# guesty_id, so duplicate deliveries are safe.
+	# NOTE: do NOT name a kwarg `event` here — frappe.enqueue has its own
+	# reserved `event` parameter and would swallow it instead of forwarding it
+	# to _process (causing "missing positional argument: event"). Use event_type.
 	frappe.enqueue(
 		"property_management.property_management.guesty.webhook._process",
 		queue="short",
-		event=event,
+		event_type=event,
 		object_id=object_id,
 		obj=_extract_object(payload),
 	)
@@ -99,9 +102,10 @@ def receive(secret=None):
 	return {"ok": True, "event": event, "id": object_id}
 
 
-def _process(event, object_id, obj=None):
+def _process(event_type=None, object_id=None, obj=None):
 	"""Background job: upsert the record, preferring a fresh fetch but falling
 	back to the payload Guesty delivered."""
+	event = event_type
 	try:
 		if event.startswith("listing"):
 			_process_listing(event, object_id, obj)
