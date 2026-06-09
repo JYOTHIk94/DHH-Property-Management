@@ -84,26 +84,30 @@ def receive(secret=None):
 		# Still 200 so Guesty doesn't retry a payload we can't parse anyway.
 		return {"ok": True, "ignored": "unparseable"}
 
-	# Heavy work (API re-fetch + upsert) runs in the background so we answer in
-	# well under 15s. Idempotent on guesty_id, so duplicate deliveries are safe.
+	# Heavy work (re-fetch + upsert) runs in the background so we answer in well
+	# under 15s. We pass the object Guesty already sent so processing can proceed
+	# even if the re-fetch fails (e.g. token rate-limited). Idempotent on
+	# guesty_id, so duplicate deliveries are safe.
 	frappe.enqueue(
 		"property_management.property_management.guesty.webhook._process",
 		queue="short",
 		event=event,
 		object_id=object_id,
+		obj=_extract_object(payload),
 	)
 
 	return {"ok": True, "event": event, "id": object_id}
 
 
-def _process(event, object_id):
-	"""Background job: re-fetch the full record from Guesty and upsert it."""
+def _process(event, object_id, obj=None):
+	"""Background job: upsert the record, preferring a fresh fetch but falling
+	back to the payload Guesty delivered."""
 	try:
 		if event.startswith("listing"):
-			_process_listing(event, object_id)
+			_process_listing(event, object_id, obj)
 
 		elif event.startswith("reservation"):
-			_process_reservation(event, object_id)
+			_process_reservation(event, object_id, obj)
 		else:
 			frappe.logger("guesty").info(f"Webhook event ignored: {event}")
 	except Exception:
@@ -113,7 +117,24 @@ def _process(event, object_id):
 		)
 
 
-def _process_listing(event, listing_id):
+def _resolve(path, fallback):
+	"""Return the freshest full record: try the Guesty API, but fall back to the
+	webhook payload if the fetch fails or comes back empty. The fetch keeps
+	``listing.updated`` accurate (payloads can be partial); the fallback keeps
+	creation working when the token is rate-limited or the API is unreachable."""
+	try:
+		fresh = _fetch(path)
+		if fresh and fresh.get("_id"):
+			return fresh
+	except Exception:
+		frappe.log_error(
+			frappe.get_traceback(),
+			f"Guesty webhook: fetch failed for {path}, falling back to payload",
+		)
+	return fallback if isinstance(fallback, dict) and fallback.get("_id") else None
+
+
+def _process_listing(event, listing_id, payload=None):
 	from property_management.property_management.guesty import sync_listings
 
 	if event == "listing.removed":
@@ -124,16 +145,16 @@ def _process_listing(event, listing_id):
 			frappe.db.commit()
 		return
 
-	listing = _fetch(f"listings/{listing_id}")
+	listing = _resolve(f"listings/{listing_id}", payload)
 	if listing and listing.get("_id"):
 		sync_listings.upsert_one(listing)
 		frappe.db.commit()
 
 
-def _process_reservation(event, reservation_id):
+def _process_reservation(event, reservation_id, payload=None):
 	from property_management.property_management.guesty import sync_reservations
 
-	reservation = _fetch(f"reservations/{reservation_id}")
+	reservation = _resolve(f"reservations/{reservation_id}", payload)
 	if reservation and reservation.get("_id"):
 		# Make sure the listing exists first (upsert_one resolves it, but a fresh
 		# Guesty listing may not be synced yet).
@@ -241,17 +262,29 @@ def _extract_event(payload):
 
 def _extract_object_id(payload):
 	"""Pull the Guesty object _id out of whatever shape the payload arrived in."""
+	obj = _extract_object(payload)
+	if obj:
+		oid = obj.get("_id") or obj.get("id")
+		if oid:
+			return oid
+	if isinstance(payload, dict):
+		return payload.get("_id") or payload.get("id") or payload.get("objectId")
+	return None
+
+
+def _extract_object(payload):
+	"""Return the full object dict Guesty nested in the webhook payload (the
+	``listing``/``reservation`` body), so processing can use it without a refetch."""
 	if not isinstance(payload, dict):
 		return None
-
 	for key in ("listing", "reservation", "object", "payload", "data"):
 		obj = payload.get(key)
-		if isinstance(obj, dict):
-			oid = obj.get("_id") or obj.get("id")
-			if oid:
-				return oid
-
-	return payload.get("_id") or payload.get("id") or payload.get("objectId")
+		if isinstance(obj, dict) and (obj.get("_id") or obj.get("id")):
+			return obj
+	# Some payloads are the object itself (no wrapper key).
+	if payload.get("_id") or payload.get("id"):
+		return payload
+	return None
 
 
 def _reject(status, message):
