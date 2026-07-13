@@ -8,6 +8,7 @@
  "field_order": [
   "section_reservation_details",
   "property_id",
+  "company",
   "reservation_booking_date",
   "reservation_type",
   "column_break_oawg",
@@ -63,6 +64,14 @@
    "label": "Property",
    "options": "Property",
    "reqd": 1
+  },
+  {
+   "description": "company that invoices this reservation. Defaults from Property Settings;",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "options": "Company"
   },
   {
    "fieldname": "column_break_oawg",

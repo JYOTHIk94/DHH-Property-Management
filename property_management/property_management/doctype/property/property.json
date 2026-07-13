@@ -12,6 +12,7 @@
   "property_type",
   "column_break_65or",
   "status",
+  "company",
   "guesty_id",
   "details_section",
   "bedrooms",
@@ -136,6 +137,15 @@
    "in_preview": 1,
    "label": "Status",
    "options": "Pending\nActive\nInactive"
+  },
+  {
+   "default": "DHH Group",
+   "description": "Leaf company (LLC) that invoices reservations for this property. Must not be a group company.",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "options": "Company"
   },
   {
    "description": "Guesty listing _id. Set automatically by the Guesty sync; do not edit.",
