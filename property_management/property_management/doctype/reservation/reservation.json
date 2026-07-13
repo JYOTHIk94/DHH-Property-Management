@@ -35,17 +35,19 @@
   "total_amount",
   "column_break_ergk",
   "reservation_sd",
+  "advance_mode_of_payment",
   "payment_status",
   "column_break_7sro",
-  "mode_of_payment",
-  "amount_paid_by_guest",
+  "outstanding_amount",
+  "total_paid_amount",
   "reservation_tax",
   "reservation_paid_commission",
-  "amended_from",
   "reference_section",
   "sales_order",
   "sales_invoice",
+  "advance_payment_entry",
   "column_break_6z2g",
+  "balance_sales_invoice",
   "payment_entry"
  ],
  "fields": [
@@ -80,7 +82,6 @@
    "options": "Booking\nInquiry\nBlocked"
   },
   {
-   "allow_on_submit": 1,
    "fieldname": "reservation_status",
    "fieldtype": "Select",
    "in_filter": 1,
@@ -163,7 +164,6 @@
    "label": "Payment Details"
   },
   {
-   "allow_on_submit": 1,
    "fieldname": "reservation_item",
    "fieldtype": "Currency",
    "in_list_view": 1,
@@ -181,15 +181,13 @@
    "fieldtype": "Column Break"
   },
   {
-   "allow_on_submit": 1,
    "fieldname": "reservation_sd",
    "fieldtype": "Currency",
    "in_list_view": 1,
    "in_preview": 1,
-   "label": "Security Deposit"
+   "label": "Advance Payment"
   },
   {
-   "allow_on_submit": 1,
    "fieldname": "reservation_paid_commission",
    "fieldtype": "Currency",
    "hidden": 1,
@@ -202,7 +200,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "allow_on_submit": 1,
    "fieldname": "reservation_management_fee",
    "fieldtype": "Currency",
    "in_list_view": 1,
@@ -210,13 +207,12 @@
    "label": "Service Charge"
   },
   {
-   "allow_on_submit": 1,
-   "fetch_from": "sales_invoice.status",
    "fieldname": "payment_status",
    "fieldtype": "Data",
    "in_list_view": 1,
    "in_preview": 1,
-   "label": "Payment Status"
+   "label": "Payment Status",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_lk0h",
@@ -227,16 +223,6 @@
    "fieldtype": "Link",
    "label": "Reservation Manager",
    "options": "User"
-  },
-  {
-   "fieldname": "amended_from",
-   "fieldtype": "Link",
-   "label": "Amended From",
-   "no_copy": 1,
-   "options": "Reservation",
-   "print_hide": 1,
-   "read_only": 1,
-   "search_index": 1
   },
   {
    "fieldname": "first_name",
@@ -260,12 +246,10 @@
   },
   {
    "fieldname": "phone_number",
-   "fieldtype": "Phone",
-   "label": "Phone Number",
-   "reqd": 1
+   "fieldtype": "Data",
+   "label": "Phone Number"
   },
   {
-   "allow_on_submit": 1,
    "fieldname": "guest",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -277,21 +261,21 @@
   {
    "fieldname": "reference_section",
    "fieldtype": "Section Break",
+   "hidden": 1,
    "label": "Reference"
   },
   {
-   "allow_on_submit": 1,
    "fieldname": "sales_order",
    "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_preview": 1,
+   "hidden": 1,
    "label": "Sales Order",
    "options": "Sales Order"
   },
   {
    "fieldname": "sales_invoice",
    "fieldtype": "Link",
-   "label": "Sales Invoice",
+   "hidden": 1,
+   "label": "Advance Sales Invoice",
    "options": "Sales Invoice"
   },
   {
@@ -299,30 +283,52 @@
    "fieldtype": "Column Break"
   },
   {
+   "fieldname": "balance_sales_invoice",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Balance Sales Invoice",
+   "options": "Sales Invoice"
+  },
+  {
    "fieldname": "payment_entry",
    "fieldtype": "Link",
+   "hidden": 1,
    "label": "Payment Entry",
    "options": "Payment Entry"
   },
   {
-   "allow_on_submit": 1,
-   "fieldname": "mode_of_payment",
+   "default": "Cash",
+   "fieldname": "advance_mode_of_payment",
    "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_preview": 1,
-   "label": "Mode Of Payment",
+   "label": "Mode of Payment",
    "options": "Mode of Payment"
   },
   {
-   "allow_on_submit": 1,
-   "fieldname": "amount_paid_by_guest",
+   "fieldname": "outstanding_amount",
    "fieldtype": "Currency",
    "in_list_view": 1,
    "in_preview": 1,
-   "label": "Amount Paid By Guest"
+   "label": "Outstanding Amount",
+   "read_only": 1
   },
   {
-   "allow_on_submit": 1,
+   "depends_on": "eval:doc.reservation_status=='Checked Out'",
+   "fieldname": "total_paid_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Total Paid Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "advance_payment_entry",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Advance Payment Entry",
+   "options": "Payment Entry",
+   "read_only": 1
+  },
+  {
    "fieldname": "total_amount",
    "fieldtype": "Currency",
    "in_list_view": 1,
@@ -332,9 +338,8 @@
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
- "is_submittable": 1,
  "links": [],
- "modified": "2026-04-16 19:38:29.185824",
+ "modified": "2026-07-13 08:57:00.189582",
  "modified_by": "Administrator",
  "module": "Property Management",
  "name": "Reservation",
@@ -342,8 +347,6 @@
  "owner": "Administrator",
  "permissions": [
   {
-   "amend": 1,
-   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -354,12 +357,9 @@
    "role": "System Manager",
    "select": 1,
    "share": 1,
-   "submit": 1,
    "write": 1
   },
   {
-   "amend": 1,
-   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -370,7 +370,6 @@
    "role": "Receptionist",
    "select": 1,
    "share": 1,
-   "submit": 1,
    "write": 1
   }
  ],

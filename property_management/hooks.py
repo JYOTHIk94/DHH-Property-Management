@@ -84,6 +84,17 @@ required_apps = ["erpnext"]
 # 	"filters": "property_management.utils.jinja_filters"
 # }
 
+# Fixtures
+# --------
+# Back-link Custom Fields (reservation) on Sales Invoice + Payment Entry so the
+# Reservation Connections dashboard can list all stage invoices and payments.
+fixtures = [
+	{
+		"dt": "Custom Field",
+		"filters": [["name", "in", ["Sales Invoice-reservation", "Payment Entry-reservation"]]],
+	}
+]
+
 # Installation
 # ------------
 
@@ -156,12 +167,13 @@ required_apps = ["erpnext"]
 # Real-time sync is driven by Guesty webhooks (see guesty/webhook.py). These
 # scheduled pulls are only a once-daily reconciliation backstop that catches
 # anything a dropped/failed webhook delivery missed.
-scheduler_events = {
-	"daily": [
-		"property_management.property_management.guesty.sync_listings.run",
-		"property_management.property_management.guesty.sync_reservations.run",
-	],
-}
+
+# scheduler_events = {
+# 	"daily": [
+# 		"property_management.property_management.guesty.sync_listings.run",
+# 		"property_management.property_management.guesty.sync_reservations.run",
+# 	],
+# }
 
 # Testing
 # -------

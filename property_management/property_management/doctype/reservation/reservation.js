@@ -8,30 +8,13 @@ frappe.ui.form.on("Reservation", {
 				}
 			};
 		});
-
-		toggle_amount_field(frm);
 	},
 
 	reservation_status(frm) {
-		toggle_amount_field(frm);
+		// Reservation is non-submittable — just persist the status change. The
+		// server (on_update) handles check-in and checkout based on the status.
+		if (["Checked In", "Checked Out", "Cancelled"].includes(frm.doc.reservation_status) && frm.is_dirty()) {
+			frm.save();
+		}
 	}
 });
-
-
-function toggle_amount_field(frm) {
-	if (["Draft", "Confirmed"].includes(frm.doc.reservation_status)) {
-
-		frm.set_df_property("amount_paid_by_guest", "hidden", 1);
-		frm.set_df_property("amount_paid_by_guest", "reqd", 0);
-
-	} else if (frm.doc.reservation_status === "Checked Out") {
-
-		frm.set_df_property("amount_paid_by_guest", "hidden", 0);
-		frm.set_df_property("amount_paid_by_guest", "reqd", 1);
-
-	} else {
-
-		frm.set_df_property("amount_paid_by_guest", "hidden", 0);
-		frm.set_df_property("amount_paid_by_guest", "reqd", 0);
-	}
-}
