@@ -15,25 +15,81 @@ class Reservation(Document):
         self.calculate_total_amount()
         self.get_or_create_customer()
 
-    def on_submit(self):
-        self.create_sales_order()
-        self.update_property_vacancy()
+    def on_update(self):
+        # Reservation is non-submittable — the whole lifecycle is driven by
+        # `reservation_status` on each save.
+        status = self.reservation_status
+        status_changed = self.has_value_changed("reservation_status")
 
-    def on_update_after_submit(self):
-        self.calculate_total_amount()
+        if status == "Checked In":
+            if status_changed:
+                self.update_property_vacancy()
+            self.process_checkin()
 
-        if self.workflow_state == "Checked Out":
+        elif status == "Checked Out":
+            self.process_checkout(status_changed)
 
-            if not self.amount_paid_by_guest or not self.mode_of_payment:
-                frappe.throw("Please enter the amount paid by guest and mode of payment before checking out.")
+        elif status == "Cancelled":
+            if status_changed:
+                self.process_cancellation()
 
-            if not self.sales_invoice:
-                self.create_sales_invoice_and_payment()
+        self.update_status_fields()
 
+    def process_cancellation(self):
+        """When the reservation is cancelled, cancel its linked Payment Entries
+        first (they reference the invoices), then the Sales Invoices."""
+        # Payment Entries must be cancelled before the invoices they pay.
+        for pename in [self.payment_entry, self.advance_payment_entry]:
+            if pename and frappe.db.exists("Payment Entry", pename):
+                pe = frappe.get_doc("Payment Entry", pename)
+                if pe.docstatus == 1:
+                    pe.flags.ignore_permissions = True
+                    pe.cancel()
+
+        for siname in [self.balance_sales_invoice, self.sales_invoice]:
+            if siname and frappe.db.exists("Sales Invoice", siname):
+                si = frappe.get_doc("Sales Invoice", siname)
+                if si.docstatus == 1:
+                    si.flags.ignore_permissions = True
+                    si.cancel()
+
+        # Free up the occupancy if the guest had checked in.
+        prev = self.get_doc_before_save()
+        if prev and prev.reservation_status == "Checked In":
             self.checkout_guest_count_update()
 
-    def on_cancel(self):
-        self.checkout_guest_count_update()
+    def process_checkin(self):
+        """Check-in: submit an invoice + payment for the advance amount
+        (captured in `reservation_sd`), allocated to that invoice.
+        """
+        advance = flt(self.reservation_sd or 0)
+        if advance <= 0 or self.advance_payment_entry:
+            return
+
+        sales_invoice = self.create_invoice(advance)
+        self.db_set("sales_invoice", sales_invoice.name)
+
+        pe = self.make_payment(sales_invoice, self.advance_mode_of_payment or "Cash", advance)
+        if pe:
+            self.db_set("advance_payment_entry", pe.name)
+
+    def process_checkout(self, status_changed=False):
+        # If a balance is still outstanding (total - advance), raise ANOTHER
+        # invoice + payment for that balance and allocate the payment to it.
+        balance = flt(self.total_amount or 0) - flt(self.reservation_sd or 0)
+
+        if balance > 0 and not self.payment_entry:
+            sales_invoice = self.create_invoice(balance)
+            self.db_set("balance_sales_invoice", sales_invoice.name)
+
+            mode_of_payment = self.advance_mode_of_payment or "Cash"
+            pe = self.make_payment(sales_invoice, mode_of_payment, balance)
+            if pe:
+                self.db_set("payment_entry", pe.name)
+
+        # Decrement occupancy only on the actual transition to "Checked Out".
+        if status_changed:
+            self.checkout_guest_count_update()
 
     def calculate_total_amount(self):
         self.total_amount = (
@@ -79,63 +135,63 @@ class Reservation(Document):
         self.reservation_item = total_amount
         self.calculate_total_amount()
 
-    def create_sales_order(self):
-        if self.reservation_status != "Confirmed":
-            return
-
-        if self.sales_order:
-            return
-
-        if not self.property_id:
-            frappe.throw("Property is required")
-
-        property_doc = frappe.get_doc("Property", self.property_id)
-
-        if not self.reservation_check_in or not self.reservation_check_out:
-            frappe.throw("Check-in and Check-out dates are required")
-
-        check_in = getdate(self.reservation_check_in)
-        check_out = getdate(self.reservation_check_out)
-
-        num_nights = (check_out - check_in).days
-
-        if num_nights <= 0:
-            frappe.throw("Check-out date must be after Check-in date")
-
-        nightly_rate = property_doc.base_price_per_night or 0
-
-        item_code = "Long Term Rental" if num_nights > 20 else "Short Term Rental"
-
-        # ✅ Build items list properly
-        items = [{
-            "item_code": item_code,
-            "qty": num_nights,
-            "rate": nightly_rate,
-        }]
-
-        # ✅ Add service charge if exists
-        if self.reservation_management_fee:
-            items.append({
-                "item_code": "Service Charge",
-                "qty": 1,
-                "rate": self.reservation_management_fee
-            })
-
-        # ✅ Create Sales Order
-        sales_order = frappe.get_doc({
-            "doctype": "Sales Order",
-            "customer": self.guest,
-            "transaction_date": today(),
-            "delivery_date": self.reservation_check_in,
-            "items": items
-        })
-
-        sales_order.insert(ignore_permissions=True)
-        sales_order.submit()
-
-        self.db_set("sales_order", sales_order.name)
-
-        frappe.msgprint(f"Sales Order {sales_order.name} created successfully.")
+    # def create_sales_order(self):
+    #     if self.reservation_status != "Confirmed":
+    #         return
+    #
+    #     if self.sales_order:
+    #         return
+    #
+    #     if not self.property_id:
+    #         frappe.throw("Property is required")
+    #
+    #     property_doc = frappe.get_doc("Property", self.property_id)
+    #
+    #     if not self.reservation_check_in or not self.reservation_check_out:
+    #         frappe.throw("Check-in and Check-out dates are required")
+    #
+    #     check_in = getdate(self.reservation_check_in)
+    #     check_out = getdate(self.reservation_check_out)
+    #
+    #     num_nights = (check_out - check_in).days
+    #
+    #     if num_nights <= 0:
+    #         frappe.throw("Check-out date must be after Check-in date")
+    #
+    #     nightly_rate = property_doc.base_price_per_night or 0
+    #
+    #     item_code = "Long Term Rental" if num_nights > 20 else "Short Term Rental"
+    #
+    #     # ✅ Build items list properly
+    #     items = [{
+    #         "item_code": item_code,
+    #         "qty": num_nights,
+    #         "rate": nightly_rate,
+    #     }]
+    #
+    #     # ✅ Add service charge if exists
+    #     if self.reservation_management_fee:
+    #         items.append({
+    #             "item_code": "Service Charge",
+    #             "qty": 1,
+    #             "rate": self.reservation_management_fee
+    #         })
+    #
+    #     # ✅ Create Sales Order
+    #     sales_order = frappe.get_doc({
+    #         "doctype": "Sales Order",
+    #         "customer": self.guest,
+    #         "transaction_date": today(),
+    #         "delivery_date": self.reservation_check_in,
+    #         "items": items
+    #     })
+    #
+    #     sales_order.insert(ignore_permissions=True)
+    #     sales_order.submit()
+    #
+    #     self.db_set("sales_order", sales_order.name)
+    #
+    #     frappe.msgprint(f"Sales Order {sales_order.name} created successfully.")
 
     def get_or_create_customer(self):
         if self.guest:
@@ -185,86 +241,122 @@ class Reservation(Document):
         self.guest = customer.name
         return customer.name
 
-    def create_sales_invoice_and_payment(self):
-        if not self.sales_order:
-            frappe.throw("Sales Order not found")
+    def create_invoice(self, amount):
+        """Create + submit a Sales Invoice whose total equals `amount`.
 
-        if self.sales_invoice:
-            return
+        Used per payment stage — the advance invoice at check-in and, if a balance
+        remains, a second invoice at checkout.
+        """
+        if not self.guest:
+            frappe.throw("Guest (Customer) is required")
 
-        # Imported lazily so the module loads even where ERPNext isn't present yet
-        # (e.g. Frappe Cloud build/validation before erpnext is installed).
-        from erpnext.selling.doctype.sales_order.sales_order import make_sales_invoice
+        if not self.property_id:
+            frappe.throw("Property is required")
 
-        sales_invoice = make_sales_invoice(self.sales_order)
+        if not self.reservation_check_in or not self.reservation_check_out:
+            frappe.throw("Check-in and Check-out dates are required")
 
-        sales_invoice.posting_date = nowdate()
-        sales_invoice.set_posting_time = 1
+        num_nights = (getdate(self.reservation_check_out) - getdate(self.reservation_check_in)).days
+        item_code = "Long Term Rental" if num_nights > 20 else "Short Term Rental"
 
+        sales_invoice = frappe.get_doc({
+            "doctype": "Sales Invoice",
+            "customer": self.guest,
+            "reservation": self.name,
+            "posting_date": nowdate(),
+            "set_posting_time": 1,
+            "due_date": nowdate(),
+            "items": [{
+                "item_code": item_code,
+                "qty": 1,
+                "rate": flt(amount),
+            }],
+        })
         sales_invoice.flags.ignore_permissions = True
         sales_invoice.insert()
         sales_invoice.submit()
+        return sales_invoice
 
-        self.db_set("sales_invoice", sales_invoice.name)
+    def make_payment(self, sales_invoice, mode_of_payment, amount):
+        """Create + submit a Payment Entry allocated to the (submitted) invoice."""
+        sales_invoice = frappe.get_doc("Sales Invoice", sales_invoice.name)
+        outstanding = flt(sales_invoice.outstanding_amount)
+        amount = flt(amount)
 
-        paid_amount = flt(self.amount_paid_by_guest or 0)
-
-        if self.mode_of_payment and paid_amount > 0:
-            self.create_payment_entry(sales_invoice, self.mode_of_payment, paid_amount)
-
-    def create_payment_entry(self, sales_invoice, mode_of_payment, paid_amount, reference_no=None):
+        if outstanding <= 0 or amount <= 0:
+            return None
 
         company = frappe.defaults.get_user_default("Company")
 
-        pe = frappe.new_doc("Payment Entry")
-        pe.payment_type = "Receive"
-        pe.posting_date = nowdate()
-        pe.party_type = "Customer"
-        pe.party = sales_invoice.customer
-        pe.party_name = frappe.db.get_value("Customer", sales_invoice.customer, "customer_name")
-
-        pe.mode_of_payment = mode_of_payment
-        pe.paid_amount = paid_amount
-        pe.received_amount = paid_amount
-
-        pe.paid_to = frappe.db.get_value(
+        paid_to = frappe.db.get_value(
             "Mode of Payment Account",
             {"parent": mode_of_payment, "company": company},
             "default_account"
         )
-
-        if not pe.paid_to:
+        if not paid_to:
             frappe.throw(f"No default account for Mode of Payment '{mode_of_payment}' in company '{company}'")
 
-        pe.paid_from_account_currency = frappe.db.get_value("Account", pe.paid_to, "account_currency")
-        pe.received_currency = frappe.db.get_value("Customer", pe.party, "default_currency") or frappe.db.get_default("currency")
+        pe = frappe.new_doc("Payment Entry")
+        pe.payment_type = "Receive"
+        pe.company = company
+        pe.reservation = self.name
+        pe.posting_date = nowdate()
+        pe.party_type = "Customer"
+        pe.party = sales_invoice.customer
+        pe.mode_of_payment = mode_of_payment
+        pe.paid_to = paid_to
+        pe.paid_amount = amount
+        pe.received_amount = amount
 
-        if pe.paid_from_account_currency == pe.received_currency:
-            pe.target_exchange_rate = 1
-        else:
-            pe.target_exchange_rate = frappe.db.get_value(
-                "Currency Exchange",
-                {
-                    "from_currency": pe.paid_from_account_currency,
-                    "to_currency": pe.received_currency
-                },
-                "exchange_rate"
-            ) or 1
-
+        # Never allocate more than what is still outstanding.
+        allocated = min(amount, outstanding)
         pe.append("references", {
             "reference_doctype": "Sales Invoice",
             "reference_name": sales_invoice.name,
             "total_amount": sales_invoice.grand_total,
-            "outstanding_amount": sales_invoice.outstanding_amount,
-            "allocated_amount": paid_amount
+            "outstanding_amount": outstanding,
+            "allocated_amount": allocated,
         })
 
         pe.flags.ignore_permissions = True
         pe.insert()
         pe.submit()
 
-        self.db_set("payment_entry", pe.name)
-        frappe.msgprint(f"Payment Entry {pe.name} created successfully.")
+        frappe.msgprint(f"Payment Entry {pe.name} created for {sales_invoice.name}.")
+        return pe
+
+    def update_status_fields(self):
+        """Reservation-level outstanding + payment status across both stage invoices.
+
+        outstanding = total - (advance payment + balance payment).
+        """
+        if self.reservation_status == "Cancelled":
+            self.db_set("outstanding_amount", 0)
+            self.db_set("total_paid_amount", 0)
+            self.db_set("payment_status", "Cancelled")
+            return
+
+        total = flt(self.total_amount or 0)
+
+        collected = 0
+        for pename in [self.advance_payment_entry, self.payment_entry]:
+            if not pename:
+                continue
+            pe = frappe.db.get_value("Payment Entry", pename, ["paid_amount", "docstatus"], as_dict=True)
+            if pe and pe.docstatus == 1:  # count only submitted (not cancelled) payments
+                collected += flt(pe.paid_amount)
+
+        outstanding = total - collected
+        self.db_set("outstanding_amount", outstanding)
+        self.db_set("total_paid_amount", collected)
+
+        if collected <= 0:
+            status = "Unpaid"
+        elif outstanding > 0:
+            status = "Partly Paid"
+        else:
+            status = "Paid"
+        self.db_set("payment_status", status)
 
 
     def update_property_vacancy(self):
