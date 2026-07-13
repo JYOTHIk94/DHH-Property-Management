@@ -21,6 +21,10 @@ support, and date-based availability.
   the advance (`reservation_sd`, "Advance Payment"); at checkout a second invoice
   + Payment Entry is raised for the remaining balance. Both invoices are submitted
   and the payments are **allocated (linked)** to them.
+- **Service item line:** the management fee (`reservation_management_fee`) is
+  itemised as a separate "Service item" line on the invoice — each stage's amount
+  is split into its rental and service portions (advance applied to rental first),
+  so the fee is billed exactly once across the two invoices.
 - **`company` on Reservation** — the leaf company that invoices the booking.
   Defaults from **Property Settings → Default Company**; guarded against group
   companies. Used for both Sales Invoice creation and Mode of Payment account
@@ -43,6 +47,11 @@ support, and date-based availability.
 - `phone_number` changed to a plain **Data** field and made non-mandatory.
 - `advance_mode_of_payment` defaults to **Cash**; the Payment Entry falls back to
   Cash when no mode is set.
+- Rental item threshold: **Long Term Rental** now applies for stays of **more than
+  10 nights** (was 20); 10 nights or fewer use **Short Term Rental**.
+- Rental item selection now uses the reservation's **`no_of_nights`** field (not
+  the check-in/check-out date span), falling back to the date span when it is
+  unset — so the item matches the recorded nights.
 
 ### Fixed
 - **Availability false-negative:** availability was a perpetual `occupied_guests`
