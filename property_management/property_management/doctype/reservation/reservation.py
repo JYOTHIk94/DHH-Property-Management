@@ -327,10 +327,10 @@ class Reservation(Document):
         company = self.company or frappe.db.get_single_value("Property Settings", "default_company")
         if not company:
             frappe.throw("Set a Default Company in Property Settings before invoicing.")
-        if frappe.db.get_value("Company", company, "is_group"):
-            frappe.throw(
-                f"Company '{company}' is a group company; choose a leaf (child) company instead."
-            )
+        # if frappe.db.get_value("Company", company, "is_group"):
+        #     frappe.throw(
+        #         f"Company '{company}' is a group company; choose a leaf (child) company instead."
+        #     )
         return company
 
     def make_payment(self, sales_invoice, mode_of_payment, amount):
