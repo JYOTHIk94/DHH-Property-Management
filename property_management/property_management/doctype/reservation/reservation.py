@@ -3,17 +3,23 @@
 
 import frappe
 from frappe.model.document import Document
-from frappe.utils import getdate, today, nowdate, flt
+from frappe.utils import getdate, today, nowdate, flt, cint
 
 
 class Reservation(Document):
 
     def validate(self):
+        self.set_default_company()
         self.validate_check_in_date()
         self.validate_check_out_date()
         self.calculate_booking_amount()
         self.calculate_total_amount()
         self.get_or_create_customer()
+
+    def set_default_company(self):
+        # Default the company from Property Settings when not set on the reservation.
+        if not self.company:
+            self.company = frappe.db.get_single_value("Property Settings", "default_company")
 
     def on_update(self):
         # Reservation is non-submittable — the whole lifecycle is driven by
@@ -21,19 +27,61 @@ class Reservation(Document):
         status = self.reservation_status
         status_changed = self.has_value_changed("reservation_status")
 
+        # Availability is date-range based: only overlapping bookings count against
+        # capacity. Validate when the booking is confirmed or the guest checks in.
+        if status in ("Confirmed", "Checked In") and status_changed:
+            self.check_availability()
+
         if status == "Checked In":
-            if status_changed:
-                self.update_property_vacancy()
             self.process_checkin()
 
         elif status == "Checked Out":
-            self.process_checkout(status_changed)
+            self.process_checkout()
 
         elif status == "Cancelled":
             if status_changed:
                 self.process_cancellation()
 
         self.update_status_fields()
+
+    def check_availability(self):
+        """Block only when *overlapping* bookings would exceed the property capacity.
+
+        Two date ranges overlap when check_in < other.check_out AND
+        check_out > other.check_in — so back-to-back / different ranges are allowed
+        (e.g. Aug 2-6 and Aug 7-9 never conflict). Same/overlapping range is capped
+        at the property's maximum_no_of_guests.
+        """
+        if not self.property_id or not self.reservation_check_in or not self.reservation_check_out:
+            return
+
+        max_guests = cint(frappe.db.get_value("Property", self.property_id, "maximum_no_of_guests"))
+        this_guests = cint(self.no_of_adults) + cint(self.no_of_children)
+
+        booked = frappe.db.sql(
+            """
+            SELECT COALESCE(SUM(no_of_adults + no_of_children), 0)
+            FROM `tabReservation`
+            WHERE property_id = %(property)s
+              AND name != %(name)s
+              AND reservation_status IN ('Confirmed', 'Checked In', 'Checked Out')
+              AND reservation_check_in < %(check_out)s
+              AND reservation_check_out > %(check_in)s
+            """,
+            {
+                "property": self.property_id,
+                "name": self.name or "",
+                "check_in": self.reservation_check_in,
+                "check_out": self.reservation_check_out,
+            },
+        )[0][0]
+
+        if cint(booked) + this_guests > max_guests:
+            frappe.throw(
+                f"{self.property_id} is not available for {self.reservation_check_in} to "
+                f"{self.reservation_check_out}. Capacity is {max_guests} guest(s); "
+                f"{cint(booked)} already booked for overlapping dates."
+            )
 
     def process_cancellation(self):
         """When the reservation is cancelled, cancel its linked Payment Entries
@@ -53,11 +101,6 @@ class Reservation(Document):
                     si.flags.ignore_permissions = True
                     si.cancel()
 
-        # Free up the occupancy if the guest had checked in.
-        prev = self.get_doc_before_save()
-        if prev and prev.reservation_status == "Checked In":
-            self.checkout_guest_count_update()
-
     def process_checkin(self):
         """Check-in: submit an invoice + payment for the advance amount
         (captured in `reservation_sd`), allocated to that invoice.
@@ -73,7 +116,7 @@ class Reservation(Document):
         if pe:
             self.db_set("advance_payment_entry", pe.name)
 
-    def process_checkout(self, status_changed=False):
+    def process_checkout(self):
         # If a balance is still outstanding (total - advance), raise ANOTHER
         # invoice + payment for that balance and allocate the payment to it.
         balance = flt(self.total_amount or 0) - flt(self.reservation_sd or 0)
@@ -86,10 +129,6 @@ class Reservation(Document):
             pe = self.make_payment(sales_invoice, mode_of_payment, balance)
             if pe:
                 self.db_set("payment_entry", pe.name)
-
-        # Decrement occupancy only on the actual transition to "Checked Out".
-        if status_changed:
-            self.checkout_guest_count_update()
 
     def calculate_total_amount(self):
         self.total_amount = (
@@ -261,6 +300,7 @@ class Reservation(Document):
 
         sales_invoice = frappe.get_doc({
             "doctype": "Sales Invoice",
+            "company": self.get_company(),
             "customer": self.guest,
             "reservation": self.name,
             "posting_date": nowdate(),
@@ -277,6 +317,22 @@ class Reservation(Document):
         sales_invoice.submit()
         return sales_invoice
 
+    def get_company(self):
+        """Leaf company that invoices this reservation.
+
+        Uses the reservation's `company`, falling back to Property Settings
+        `default_company`. Multi-company setup (DHH Group + child LLCs): transactions
+        must post against a leaf company, never a group parent.
+        """
+        company = self.company or frappe.db.get_single_value("Property Settings", "default_company")
+        if not company:
+            frappe.throw("Set a Default Company in Property Settings before invoicing.")
+        if frappe.db.get_value("Company", company, "is_group"):
+            frappe.throw(
+                f"Company '{company}' is a group company; choose a leaf (child) company instead."
+            )
+        return company
+
     def make_payment(self, sales_invoice, mode_of_payment, amount):
         """Create + submit a Payment Entry allocated to the (submitted) invoice."""
         sales_invoice = frappe.get_doc("Sales Invoice", sales_invoice.name)
@@ -286,7 +342,7 @@ class Reservation(Document):
         if outstanding <= 0 or amount <= 0:
             return None
 
-        company = frappe.defaults.get_user_default("Company")
+        company = sales_invoice.company or self.get_company()
 
         paid_to = frappe.db.get_value(
             "Mode of Payment Account",
@@ -357,66 +413,4 @@ class Reservation(Document):
         else:
             status = "Paid"
         self.db_set("payment_status", status)
-
-
-    def update_property_vacancy(self):
-
-        if not self.property_id:
-            return
-
-        # Get Property
-        property_doc = frappe.get_doc("Property", self.property_id)
-
-        # Try to find existing log
-        log_name = frappe.db.get_value(
-            "Property Vacancy Log",
-            {"property": self.property_id},
-            "name"
-        )
-
-        if log_name:
-            log_doc = frappe.get_doc("Property Vacancy Log", log_name)
-            log_doc.occupied_guests = log_doc.occupied_guests + self.no_of_adults + self.no_of_children
-
-        else:
-            log_doc = frappe.new_doc("Property Vacancy Log")
-            log_doc.property = self.property_id
-            log_doc.maximum_no_of_guests = property_doc.maximum_no_of_guests or 0
-            log_doc.occupied_guests = (self.no_of_adults or 0) + (self.no_of_children or 0)
-        log_doc.save(ignore_permissions=True)
-
-    def checkout_guest_count_update(self):
-
-        if not self.property_id:
-            return
-
-        guest_count = (self.no_of_adults or 0) + (self.no_of_children or 0)
-
-        # ✅ Correct Doctype name
-        log_name = frappe.db.get_value(
-            "Property Vacancy Log",
-            {"property": self.property_id},
-            "name"
-        )
-        
-
-        if not log_name:
-            return  # No log exists → nothing to update
-
-        log_doc = frappe.get_doc("Property Vacancy Log", log_name)
-
-        # ✅ Reduce occupied guests
-        log_doc.occupied_guests = (log_doc.occupied_guests or 0) - guest_count
-
-        # ✅ Prevent negative values
-        if log_doc.occupied_guests < 0:
-            log_doc.occupied_guests = 0
-
-        # ✅ Always update available
-        log_doc.available = (
-            (log_doc.maximum_no_of_guests or 0) -
-            (log_doc.occupied_guests or 0)
-        )
-
-        log_doc.save(ignore_permissions=True)
 
