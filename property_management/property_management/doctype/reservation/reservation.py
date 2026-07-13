@@ -109,7 +109,12 @@ class Reservation(Document):
         if advance <= 0 or self.advance_payment_entry:
             return
 
-        sales_invoice = self.create_invoice(advance)
+        # The advance is applied to rental first, then to the service charge.
+        rental_total = flt(self.reservation_item or 0)
+        adv_rental = min(advance, rental_total)
+        adv_service = advance - adv_rental
+
+        sales_invoice = self.create_invoice(adv_rental, adv_service)
         self.db_set("sales_invoice", sales_invoice.name)
 
         pe = self.make_payment(sales_invoice, self.advance_mode_of_payment or "Cash", advance)
@@ -119,10 +124,19 @@ class Reservation(Document):
     def process_checkout(self):
         # If a balance is still outstanding (total - advance), raise ANOTHER
         # invoice + payment for that balance and allocate the payment to it.
-        balance = flt(self.total_amount or 0) - flt(self.reservation_sd or 0)
+        advance = flt(self.reservation_sd or 0)
+        balance = flt(self.total_amount or 0) - advance
 
         if balance > 0 and not self.payment_entry:
-            sales_invoice = self.create_invoice(balance)
+            # Remaining rental + remaining service charge after the advance.
+            rental_total = flt(self.reservation_item or 0)
+            fee = flt(self.reservation_management_fee or 0)
+            adv_rental = min(advance, rental_total)
+            adv_service = advance - adv_rental
+            bal_rental = rental_total - adv_rental
+            bal_service = fee - adv_service
+
+            sales_invoice = self.create_invoice(bal_rental, bal_service)
             self.db_set("balance_sales_invoice", sales_invoice.name)
 
             mode_of_payment = self.advance_mode_of_payment or "Cash"
@@ -280,11 +294,13 @@ class Reservation(Document):
         self.guest = customer.name
         return customer.name
 
-    def create_invoice(self, amount):
-        """Create + submit a Sales Invoice whose total equals `amount`.
+    def create_invoice(self, rental_amount, service_amount=0):
+        """Create + submit a Sales Invoice whose total equals rental + service.
 
-        Used per payment stage — the advance invoice at check-in and, if a balance
-        remains, a second invoice at checkout.
+        The rental portion uses the Short/Long Term Rental item; the management fee
+        (when present) is itemised as a separate "Service item" line. Used per
+        payment stage — the advance invoice at check-in and, if a balance remains,
+        a second invoice at checkout.
         """
         if not self.guest:
             frappe.throw("Guest (Customer) is required")
@@ -295,8 +311,19 @@ class Reservation(Document):
         if not self.reservation_check_in or not self.reservation_check_out:
             frappe.throw("Check-in and Check-out dates are required")
 
-        num_nights = (getdate(self.reservation_check_out) - getdate(self.reservation_check_in)).days
-        item_code = "Long Term Rental" if num_nights > 20 else "Short Term Rental"
+        # Use the reservation's No of Nights; fall back to the date span if unset.
+        num_nights = cint(self.no_of_nights) or (
+            getdate(self.reservation_check_out) - getdate(self.reservation_check_in)
+        ).days
+        item_code = "Long Term Rental" if num_nights > 10 else "Short Term Rental"
+
+        items = []
+        if flt(rental_amount) > 0:
+            items.append({"item_code": item_code, "qty": 1, "rate": flt(rental_amount)})
+        if flt(service_amount) > 0:
+            items.append({"item_code": "Service item", "qty": 1, "rate": flt(service_amount)})
+        if not items:  # nothing to bill (both zero) — fall back to a rental line
+            items.append({"item_code": item_code, "qty": 1, "rate": flt(rental_amount)})
 
         sales_invoice = frappe.get_doc({
             "doctype": "Sales Invoice",
@@ -306,11 +333,7 @@ class Reservation(Document):
             "posting_date": nowdate(),
             "set_posting_time": 1,
             "due_date": nowdate(),
-            "items": [{
-                "item_code": item_code,
-                "qty": 1,
-                "rate": flt(amount),
-            }],
+            "items": items,
         })
         sales_invoice.flags.ignore_permissions = True
         sales_invoice.insert()
