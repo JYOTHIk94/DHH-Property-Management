@@ -6,20 +6,28 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "tab_booking",
   "section_reservation_details",
   "property_id",
   "company",
   "reservation_booking_date",
   "reservation_type",
+  "source",
   "column_break_oawg",
   "reservation_link",
   "guesty_id",
+  "confirmation_code",
+  "related_reservation",
   "reservation_manager",
   "no_of_nights",
   "column_break_y7nx",
   "reservation_status",
+  "guest_status",
   "reservation_check_in",
+  "check_in_time",
   "reservation_check_out",
+  "check_out_time",
+  "tab_guests",
   "section_guest_details",
   "first_name",
   "last_name",
@@ -29,7 +37,10 @@
   "guest_type",
   "no_of_adults",
   "no_of_children",
+  "no_of_infants",
   "guest",
+  "notes",
+  "tab_payments",
   "section_financial_details",
   "reservation_item",
   "reservation_management_fee",
@@ -42,6 +53,8 @@
   "outstanding_amount",
   "total_paid_amount",
   "reservation_tax",
+  "security_deposit",
+  "security_deposit_status",
   "reservation_paid_commission",
   "reference_section",
   "sales_order",
@@ -49,9 +62,46 @@
   "advance_payment_entry",
   "column_break_6z2g",
   "balance_sales_invoice",
-  "payment_entry"
+  "payment_entry",
+  "credit_note",
+  "refund_payment_entry",
+  "tab_folio",
+  "by_line_items_section",
+  "reservation_line_items",
+  "accommodation_fare__cleaning_fee_section",
+  "accommodation_fare",
+  "night_fare_section",
+  "night_fare",
+  "guesty_folio_section",
+  "folio_currency",
+  "folio_total_price",
+  "folio_balance_due",
+  "column_break_folio1",
+  "folio_host_payout",
+  "folio_fare_cleaning",
+  "folio_total_taxes",
+  "folio_total_fees",
+  "payout_section",
+  "payout",
+  "owners_revenue",
+  "your_commission",
+  "net_income",
+  "column_break_payout",
+  "your_commission_inc_tax",
+  "channel_commission",
+  "channel_commission_tax",
+  "folio_payments_section",
+  "folio_payments",
+  "scheduled_payments_section",
+  "scheduled_payments",
+  "activity_log_tab"
  ],
  "fields": [
+  {
+   "fieldname": "tab_booking",
+   "fieldtype": "Tab Break",
+   "label": "Booking Details"
+  },
   {
    "fieldname": "section_reservation_details",
    "fieldtype": "Section Break",
@@ -91,6 +141,38 @@
    "options": "Booking\nInquiry\nBlocked"
   },
   {
+   "description": "Booking source / channel (e.g. Airbnb, Booking.com, Direct).",
+   "fieldname": "source",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Source"
+  },
+  {
+   "fieldname": "check_in_time",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Check-in Time"
+  },
+  {
+   "fieldname": "check_out_time",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Check-out Time"
+  },
+  {
+   "default": "0",
+   "fieldname": "no_of_infants",
+   "fieldtype": "Int",
+   "label": "No of Infants"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  },
+  {
    "fieldname": "reservation_status",
    "fieldtype": "Select",
    "in_filter": 1,
@@ -99,7 +181,7 @@
    "in_preview": 1,
    "in_standard_filter": 1,
    "label": "Reservation Status",
-   "options": "Draft\nConfirmed\nChecked In\nChecked Out\nCancelled"
+   "options": "Draft\nScheduled\nConfirmed\nCancelled"
   },
   {
    "fieldname": "no_of_nights",
@@ -141,6 +223,11 @@
    "unique": 1
   },
   {
+   "fieldname": "tab_guests",
+   "fieldtype": "Tab Break",
+   "label": "Guests"
+  },
+  {
    "fieldname": "section_guest_details",
    "fieldtype": "Section Break",
    "label": "Guest Details"
@@ -166,6 +253,11 @@
    "in_filter": 1,
    "in_list_view": 1,
    "label": "No of Children"
+  },
+  {
+   "fieldname": "tab_payments",
+   "fieldtype": "Tab Break",
+   "label": "Payments"
   },
   {
    "fieldname": "section_financial_details",
@@ -217,11 +309,12 @@
   },
   {
    "fieldname": "payment_status",
-   "fieldtype": "Data",
+   "fieldtype": "Select",
    "in_list_view": 1,
    "in_preview": 1,
    "label": "Payment Status",
-   "read_only": 1
+   "read_only": 1,
+   "options": "Unpaid\nPartly Paid\nPaid\nRefunded\nPartially Refunded\nCancelled"
   },
   {
    "fieldname": "column_break_lk0h",
@@ -343,12 +436,240 @@
    "in_list_view": 1,
    "in_preview": 1,
    "label": "Total Amount"
+  },
+  {
+   "fieldname": "tab_folio",
+   "fieldtype": "Tab Break",
+   "label": "Guest Folio & Invoice"
+  },
+  {
+   "description": "Guest folio mirrored from Guesty (updated via the Guesty sync/webhook).",
+   "fieldname": "guesty_folio_section",
+   "fieldtype": "Section Break",
+   "label": "Guesty Folio"
+  },
+  {
+   "fieldname": "folio_currency",
+   "fieldtype": "Link",
+   "label": "Folio Currency",
+   "options": "Currency"
+  },
+  {
+   "fieldname": "folio_total_price",
+   "fieldtype": "Currency",
+   "label": "Total Price",
+   "options": "folio_currency"
+  },
+  {
+   "fieldname": "folio_balance_due",
+   "fieldtype": "Currency",
+   "label": "Balance Due",
+   "options": "folio_currency"
+  },
+  {
+   "fieldname": "column_break_folio1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "folio_host_payout",
+   "fieldtype": "Currency",
+   "label": "Host Payout",
+   "options": "folio_currency"
+  },
+  {
+   "fieldname": "folio_fare_cleaning",
+   "fieldtype": "Currency",
+   "label": "Cleaning Fee",
+   "options": "folio_currency"
+  },
+  {
+   "fieldname": "folio_total_taxes",
+   "fieldtype": "Currency",
+   "label": "Total Taxes",
+   "options": "folio_currency"
+  },
+  {
+   "fieldname": "folio_total_fees",
+   "fieldtype": "Currency",
+   "label": "Total Fees",
+   "options": "folio_currency"
+  },
+  {
+   "description": "Payout breakdown mirrored from Guesty.",
+   "fieldname": "payout_section",
+   "fieldtype": "Tab Break",
+   "label": "Payout"
+  },
+  {
+   "fieldname": "payout",
+   "fieldtype": "Currency",
+   "label": "Payout",
+   "options": "folio_currency"
+  },
+  {
+   "fieldname": "owners_revenue",
+   "fieldtype": "Currency",
+   "label": "Owner's Revenue",
+   "options": "folio_currency"
+  },
+  {
+   "fieldname": "your_commission",
+   "fieldtype": "Currency",
+   "label": "Your Commission",
+   "options": "folio_currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "net_income",
+   "fieldtype": "Currency",
+   "label": "Net Income",
+   "options": "folio_currency"
+  },
+  {
+   "fieldname": "column_break_payout",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "your_commission_inc_tax",
+   "fieldtype": "Currency",
+   "label": "Your Commission inc. Tax",
+   "options": "folio_currency"
+  },
+  {
+   "fieldname": "channel_commission",
+   "fieldtype": "Currency",
+   "label": "Channel Commission",
+   "options": "folio_currency"
+  },
+  {
+   "fieldname": "channel_commission_tax",
+   "fieldtype": "Currency",
+   "label": "Channel Commission Tax",
+   "options": "folio_currency"
+  },
+  {
+   "fieldname": "folio_payments_section",
+   "fieldtype": "Section Break",
+   "label": "Payments"
+  },
+  {
+   "fieldname": "folio_payments",
+   "fieldtype": "Table",
+   "label": "Payments",
+   "options": "Reservation Payment",
+   "read_only": 1
+  },
+  {
+   "fieldname": "by_line_items_section",
+   "fieldtype": "Section Break",
+   "label": "By line Items"
+  },
+  {
+   "fieldname": "reservation_line_items",
+   "fieldtype": "Table",
+   "label": "Reservation Line Items",
+   "options": "Reservation Line Items"
+  },
+  {
+   "fieldname": "accommodation_fare__cleaning_fee_section",
+   "fieldtype": "Section Break",
+   "label": "Accommodation Fare  &  Cleaning Fee"
+  },
+  {
+   "fieldname": "accommodation_fare",
+   "fieldtype": "Table",
+   "label": "Accommodation Fare",
+   "options": "Accommodation Fare"
+  },
+  {
+   "fieldname": "activity_log_tab",
+   "fieldtype": "Tab Break",
+   "label": "Activity Log"
+  },
+  {
+   "fieldname": "confirmation_code",
+   "fieldtype": "Data",
+   "label": "Confirmation Code",
+   "read_only": 1,
+   "no_copy": 1,
+   "in_standard_filter": 1,
+   "description": "Guesty confirmation code. Shared by split reservations from a mid-stay move."
+  },
+  {
+   "fieldname": "related_reservation",
+   "fieldtype": "Link",
+   "label": "Related Reservation",
+   "options": "Reservation",
+   "read_only": 1,
+   "description": "Sibling reservation from a split mid-stay property change (same confirmation code)."
+  },
+  {
+   "default": "Not Arrived",
+   "fieldname": "guest_status",
+   "fieldtype": "Select",
+   "label": "Guest Status",
+   "options": "Not Arrived\nCheckin\nCheckout",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Guest stay status from Guesty (separate from payment status)."
+  },
+  {
+   "fieldname": "credit_note",
+   "fieldtype": "Link",
+   "label": "Credit Note",
+   "options": "Sales Invoice",
+   "read_only": 1,
+   "description": "Sales Return raised for a refund / paid-cancellation."
+  },
+  {
+   "fieldname": "refund_payment_entry",
+   "fieldtype": "Link",
+   "label": "Refund Payment Entry",
+   "options": "Payment Entry",
+   "read_only": 1,
+   "description": "Pay-type Payment Entry that returned cash to the guest."
+  },
+  {
+   "fieldname": "scheduled_payments_section",
+   "fieldtype": "Section Break",
+   "label": "Scheduled / Auto Payments"
+  },
+  {
+   "fieldname": "scheduled_payments",
+   "fieldtype": "Table",
+   "label": "Scheduled Payments",
+   "options": "Reservation Scheduled Payment"
+  },
+  {
+   "fieldname": "night_fare",
+   "fieldtype": "Table",
+   "label": "Nightly Breakdown",
+   "options": "Reservation Night Fare"
+  },
+  {
+   "fieldname": "night_fare_section",
+   "fieldtype": "Section Break",
+   "label": "Nightly Breakdown"
+  },
+  {
+   "fieldname": "security_deposit",
+   "fieldtype": "Currency",
+   "label": "Security Deposit",
+   "read_only": 1,
+   "description": "Security deposit amount from Guesty (payments section)."
+  },
+  {
+   "fieldname": "security_deposit_status",
+   "fieldtype": "Data",
+   "label": "Security Deposit Status",
+   "read_only": 1,
+   "description": "Held / Charged / Released \u2014 from Guesty."
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-13 08:57:00.189582",
+ "modified": "2026-07-16 17:12:27.624228",
  "modified_by": "Administrator",
  "module": "Property Management",
  "name": "Reservation",

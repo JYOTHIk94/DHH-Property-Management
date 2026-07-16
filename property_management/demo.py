@@ -55,12 +55,12 @@ def seed_reservations():
             r.advance_mode_of_payment = "Cash"
 
         if final_status in ("Checked In", "Checked Out"):
-            r.reservation_status = "Checked In"
+            r.guest_status = "Checkin"
             r.save(ignore_permissions=True)
 
         if final_status == "Checked Out":
             r.mode_of_payment = "Cash"
-            r.reservation_status = "Checked Out"
+            r.guest_status = "Checkout"
             r.save(ignore_permissions=True)
 
         r.reload()
