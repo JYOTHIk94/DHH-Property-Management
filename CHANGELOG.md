@@ -37,6 +37,22 @@ support, and date-based availability.
 - **Date-range availability check** (`check_availability`): a booking is blocked
   only when *overlapping* reservations would exceed the property's guest capacity.
   Different or back-to-back date ranges are always allowed.
+- **Guesty guest folio mirrored on the Reservation** — a "Guesty Folio" section
+  with the money breakdown (currency, total price, balance due, host payout,
+  cleaning fee, taxes, fees) plus three child tables: **Invoice Items** (folio
+  breakdown by line item), **Night Rates** (folio breakdown by night — from
+  Guesty `nightlyRates`, else the accommodation fare split evenly across the
+  stay), and **Payments** (`Reservation Invoice Item` / `Reservation Night Rate` /
+  `Reservation Payment` doctypes). Populated from the Guesty reservation `money`
+  object by the sync and webhook. ISO timestamps are normalised; unknown
+  currencies are skipped.
+- **Payout section** on the Reservation mirroring Guesty's payout view: Payout,
+  Owner's Revenue, Your Commission, Net Income, Your Commission inc. Tax, Channel
+  Commission, Channel Commission Tax — mapped from the Guesty `money` object.
+- Additional Guesty booking/guest fields: **Source** (channel), **Check-in /
+  Check-out Time** (planned arrival/departure), **No of Infants**, and **Notes**.
+- Reservation form reorganised into **tabs** (Booking Details, Guests, Payments,
+  Guest Folio & Invoice) to mirror the Guesty reservation layout.
 - Seed/demo helpers in `demo.py` (`seed_reservations`, `seed_availability_demo`).
 
 ### Changed

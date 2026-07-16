@@ -11,9 +11,16 @@ frappe.ui.form.on("Reservation", {
 	},
 
 	reservation_status(frm) {
-		// Reservation is non-submittable — just persist the status change. The
-		// server (on_update) handles check-in and checkout based on the status.
-		if (["Checked In", "Checked Out", "Cancelled"].includes(frm.doc.reservation_status) && frm.is_dirty()) {
+		// Lifecycle status — persist a cancellation so on_update can reverse docs.
+		if (frm.doc.reservation_status === "Cancelled" && frm.is_dirty()) {
+			frm.save();
+		}
+	},
+
+	guest_status(frm) {
+		// Stay status drives billing — persist check-in / checkout so the server
+		// (on_update) raises the invoice + payment.
+		if (["Checkin", "Checkout"].includes(frm.doc.guest_status) && frm.is_dirty()) {
 			frm.save();
 		}
 	}

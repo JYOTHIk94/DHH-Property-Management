@@ -22,25 +22,29 @@ class Reservation(Document):
             self.company = frappe.db.get_single_value("Property Settings", "default_company")
 
     def on_update(self):
-        # Reservation is non-submittable — the whole lifecycle is driven by
-        # `reservation_status` on each save.
+        # Reservation is non-submittable. Lifecycle status (Draft/Scheduled/
+        # Confirmed/Cancelled) is separate from the guest *stay* status
+        # (Not Arrived/Checkin/Checkout) — the latter drives billing.
         status = self.reservation_status
         status_changed = self.has_value_changed("reservation_status")
+        guest_status = self.guest_status
+        guest_status_changed = self.has_value_changed("guest_status")
 
         # Availability is date-range based: only overlapping bookings count against
-        # capacity. Validate when the booking is confirmed or the guest checks in.
-        if status in ("Confirmed", "Checked In") and status_changed:
+        # capacity. Validate when confirmed or when the guest checks in.
+        if (status == "Confirmed" and status_changed) or (
+            guest_status == "Checkin" and guest_status_changed
+        ):
             self.check_availability()
 
-        if status == "Checked In":
+        # Check-in raises the advance invoice + payment; checkout the balance.
+        if guest_status == "Checkin":
             self.process_checkin()
-
-        elif status == "Checked Out":
+        elif guest_status == "Checkout":
             self.process_checkout()
 
-        elif status == "Cancelled":
-            if status_changed:
-                self.process_cancellation()
+        if status == "Cancelled" and status_changed:
+            self.process_cancellation()
 
         self.update_status_fields()
 
@@ -64,7 +68,7 @@ class Reservation(Document):
             FROM `tabReservation`
             WHERE property_id = %(property)s
               AND name != %(name)s
-              AND reservation_status IN ('Confirmed', 'Checked In', 'Checked Out')
+              AND reservation_status = 'Confirmed'
               AND reservation_check_in < %(check_out)s
               AND reservation_check_out > %(check_in)s
             """,
@@ -145,6 +149,10 @@ class Reservation(Document):
                 self.db_set("payment_entry", pe.name)
 
     def calculate_total_amount(self):
+        # Guesty is authoritative for money on synced reservations — keep the
+        # grand total mapped from the payload (it includes taxes).
+        if self.flags.get("from_guesty"):
+            return
         self.total_amount = (
             (self.reservation_item or 0) +
             (self.reservation_management_fee or 0)
@@ -409,6 +417,11 @@ class Reservation(Document):
 
         outstanding = total - (advance payment + balance payment).
         """
+        # Guesty is authoritative for money on synced reservations — the
+        # payment_status / outstanding / total_paid mapped from the payload win.
+        if self.flags.get("from_guesty"):
+            return
+
         if self.reservation_status == "Cancelled":
             self.db_set("outstanding_amount", 0)
             self.db_set("total_paid_amount", 0)
