@@ -55,6 +55,24 @@ GUEST_STATUS_MAP = {
 	"checkedout": "Checkout",
 }
 
+# Guesty's API returns SCREAMING_CASE payment enums (`SUCCEEDED`) while its UI
+# shows friendly labels ("Approved"). Users reconcile against the Guesty UI, so
+# store the label. Unmapped enums fall back to title-case via _map_payment_status.
+PAYMENT_STATUS_MAP = {
+	"succeeded": "Approved",
+	"authorized": "Authorized",
+	"pending": "Pending",
+	"processing": "Processing",
+	"failed": "Failed",
+	"declined": "Declined",
+	"canceled": "Canceled",
+	"cancelled": "Canceled",
+	"voided": "Voided",
+	"refunded": "Refunded",
+	"partially_refunded": "Partially Refunded",
+	"chargeback": "Chargeback",
+}
+
 
 
 def run():
@@ -256,7 +274,7 @@ def _folio_line_items(money):
 		rows.append({
 			"title": getdate(paid) if paid else None,
 			"transaction_type": cstr(p.get("type") or p.get("kind") or "Payment"),
-			"status": cstr(p.get("status") or ""),
+			"status": _map_payment_status(p.get("status")),
 			"payment_method": cstr(p.get("paymentMethod") or p.get("method") or ""),
 			"amount": flt(p.get("amount") or 0),
 			"guesty_item_id": cstr(p.get("_id") or ""),
@@ -272,7 +290,7 @@ def _folio_payments(money):
 			"payment_method": cstr(p.get("paymentMethod") or p.get("method") or ""),
 			"amount": flt(p.get("amount") or 0),
 			"currency": _valid_currency(p.get("currency")) or currency,
-			"status": cstr(p.get("status") or ""),
+			"status": _map_payment_status(p.get("status")),
 			"paid_at": _parse_dt(p.get("paidAt") or p.get("createdAt")),
 			"note": cstr(p.get("note") or ""),
 			"guesty_payment_id": cstr(p.get("_id") or ""),
@@ -462,6 +480,14 @@ def _map_status(status):
 
 def _map_guest_status(status):
 	return GUEST_STATUS_MAP.get(cstr(status).strip().lower(), "Not Arrived")
+
+
+def _map_payment_status(status):
+	"""Guesty payment enum → the label Guesty's own UI shows (SUCCEEDED → Approved)."""
+	raw = cstr(status).strip()
+	if not raw:
+		return ""
+	return PAYMENT_STATUS_MAP.get(raw.lower(), raw.replace("_", " ").title())
 
 
 def _get_property(listing_id):
