@@ -65,9 +65,9 @@
   "payment_entry",
   "credit_note",
   "refund_payment_entry",
-  "tab_folio",
-  "by_line_items_section",
+  "folio_payments_section",
   "reservation_line_items",
+  "tab_folio",
   "accommodation_fare__cleaning_fee_section",
   "accommodation_fare",
   "night_fare_section",
@@ -90,10 +90,6 @@
   "your_commission_inc_tax",
   "channel_commission",
   "channel_commission_tax",
-  "folio_payments_section",
-  "folio_payments",
-  "scheduled_payments_section",
-  "scheduled_payments",
   "activity_log_tab"
  ],
  "fields": [
@@ -313,8 +309,8 @@
    "in_list_view": 1,
    "in_preview": 1,
    "label": "Payment Status",
-   "read_only": 1,
-   "options": "Unpaid\nPartly Paid\nPaid\nRefunded\nPartially Refunded\nCancelled"
+   "options": "Unpaid\nPartly Paid\nPaid\nRefunded\nPartially Refunded\nCancelled",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_lk0h",
@@ -553,21 +549,9 @@
    "label": "Payments"
   },
   {
-   "fieldname": "folio_payments",
-   "fieldtype": "Table",
-   "label": "Payments",
-   "options": "Reservation Payment",
-   "read_only": 1
-  },
-  {
-   "fieldname": "by_line_items_section",
-   "fieldtype": "Section Break",
-   "label": "By line Items"
-  },
-  {
    "fieldname": "reservation_line_items",
    "fieldtype": "Table",
-   "label": "Reservation Line Items",
+   "label": "Payment Details",
    "options": "Reservation Line Items"
   },
   {
@@ -587,58 +571,47 @@
    "label": "Activity Log"
   },
   {
+   "description": "Guesty confirmation code. Shared by split reservations from a mid-stay move.",
    "fieldname": "confirmation_code",
    "fieldtype": "Data",
-   "label": "Confirmation Code",
-   "read_only": 1,
-   "no_copy": 1,
    "in_standard_filter": 1,
-   "description": "Guesty confirmation code. Shared by split reservations from a mid-stay move."
+   "label": "Confirmation Code",
+   "no_copy": 1,
+   "read_only": 1
   },
   {
+   "description": "Sibling reservation from a split mid-stay property change (same confirmation code).",
    "fieldname": "related_reservation",
    "fieldtype": "Link",
    "label": "Related Reservation",
    "options": "Reservation",
-   "read_only": 1,
-   "description": "Sibling reservation from a split mid-stay property change (same confirmation code)."
+   "read_only": 1
   },
   {
    "default": "Not Arrived",
+   "description": "Guest stay status from Guesty (separate from payment status).",
    "fieldname": "guest_status",
    "fieldtype": "Select",
-   "label": "Guest Status",
-   "options": "Not Arrived\nCheckin\nCheckout",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "description": "Guest stay status from Guesty (separate from payment status)."
+   "label": "Guest Status",
+   "options": "Not Arrived\nCheckin\nCheckout"
   },
   {
+   "description": "Sales Return raised for a refund / paid-cancellation.",
    "fieldname": "credit_note",
    "fieldtype": "Link",
    "label": "Credit Note",
    "options": "Sales Invoice",
-   "read_only": 1,
-   "description": "Sales Return raised for a refund / paid-cancellation."
+   "read_only": 1
   },
   {
+   "description": "Pay-type Payment Entry that returned cash to the guest.",
    "fieldname": "refund_payment_entry",
    "fieldtype": "Link",
    "label": "Refund Payment Entry",
    "options": "Payment Entry",
-   "read_only": 1,
-   "description": "Pay-type Payment Entry that returned cash to the guest."
-  },
-  {
-   "fieldname": "scheduled_payments_section",
-   "fieldtype": "Section Break",
-   "label": "Scheduled / Auto Payments"
-  },
-  {
-   "fieldname": "scheduled_payments",
-   "fieldtype": "Table",
-   "label": "Scheduled Payments",
-   "options": "Reservation Scheduled Payment"
+   "read_only": 1
   },
   {
    "fieldname": "night_fare",
@@ -652,24 +625,24 @@
    "label": "Nightly Breakdown"
   },
   {
+   "description": "Security deposit amount from Guesty (payments section).",
    "fieldname": "security_deposit",
    "fieldtype": "Currency",
    "label": "Security Deposit",
-   "read_only": 1,
-   "description": "Security deposit amount from Guesty (payments section)."
+   "read_only": 1
   },
   {
+   "description": "Held / Charged / Released \u2014 from Guesty.",
    "fieldname": "security_deposit_status",
    "fieldtype": "Data",
    "label": "Security Deposit Status",
-   "read_only": 1,
-   "description": "Held / Charged / Released \u2014 from Guesty."
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-16 17:12:27.624228",
+ "modified": "2026-07-17 13:22:34.538918",
  "modified_by": "Administrator",
  "module": "Property Management",
  "name": "Reservation",
