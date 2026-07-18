@@ -459,7 +459,7 @@ def _payment_status(money):
 	"""Derive the ERPNext payment status from Guesty money.
 
 	Refund state is detected from a negative net or a refund line in payments;
-	otherwise driven by balanceDue / totalPaid.
+	otherwise driven by isFullyPaid, falling back to balanceDue / totalPaid.
 	"""
 	paid = flt(money.get("totalPaid") or 0)
 	balance = flt(money.get("balanceDue") or 0)
@@ -472,10 +472,14 @@ def _payment_status(money):
 		# Some money was returned. Fully refunded when nothing net remains paid.
 		return "Refunded" if paid <= 0 else "Partially Refunded"
 	if paid <= 0:
-		return "Unpaid"
+		return "Not Paid"
+	# Guesty states paid-in-full explicitly; balanceDue is the fallback for
+	# older payloads that predate the flag.
+	if money.get("isFullyPaid"):
+		return "Fully Paid"
 	if balance > 0:
-		return "Partly Paid"
-	return "Paid"
+		return "Partially Paid"
+	return "Fully Paid"
 
 
 def _map_status(status):

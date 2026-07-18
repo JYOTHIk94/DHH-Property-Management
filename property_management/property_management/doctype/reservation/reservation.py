@@ -443,10 +443,10 @@ class Reservation(Document):
         self.db_set("total_paid_amount", collected)
 
         if collected <= 0:
-            status = "Unpaid"
+            status = "Not Paid"
         elif outstanding > 0:
-            status = "Partly Paid"
+            status = "Partially Paid"
         else:
-            status = "Paid"
+            status = "Fully Paid"
         self.db_set("payment_status", status)
 

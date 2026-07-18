@@ -309,7 +309,7 @@
    "in_list_view": 1,
    "in_preview": 1,
    "label": "Payment Status",
-   "options": "Unpaid\nPartly Paid\nPaid\nRefunded\nPartially Refunded\nCancelled",
+   "options": "Not Paid\nPartially Paid\nFully Paid\nRefunded\nPartially Refunded\nCancelled",
    "read_only": 1
   },
   {

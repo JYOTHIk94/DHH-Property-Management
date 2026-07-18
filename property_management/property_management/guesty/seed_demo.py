@@ -71,9 +71,9 @@ def _money(fare, cleaning, paid, tax=0.0, deposit=0.0, payments=None, nightly=No
 def _scenarios():
 	"""(idx, label, guesty status, check_in, check_out, nights, money)."""
 	return [
-		("01", "Confirmed — Unpaid", "confirmed", "2026-08-03", "2026-08-06", 3,
+		("01", "Confirmed — Not Paid", "confirmed", "2026-08-03", "2026-08-06", 3,
 		 _money(3000, 300, 0)),
-		("02", "Confirmed — Partly Paid", "confirmed", "2026-08-10", "2026-08-13", 3,
+		("02", "Confirmed — Partially Paid", "confirmed", "2026-08-10", "2026-08-13", 3,
 		 _money(3000, 300, 1500, payments=[_pay(1500, "SUCCEEDED", _id="p1")])),
 		("03", "Confirmed — Fully Paid", "confirmed", "2026-08-17", "2026-08-20", 3,
 		 _money(3000, 300, 3300, payments=[_pay(3300, "SUCCEEDED", _id="p1")])),
