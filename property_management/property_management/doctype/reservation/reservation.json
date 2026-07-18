@@ -177,7 +177,7 @@
    "in_preview": 1,
    "in_standard_filter": 1,
    "label": "Reservation Status",
-   "options": "Draft\nScheduled\nConfirmed\nCancelled"
+   "options": "Draft\nReserved\nAwaiting Payment\nConfirmed\nCancelled"
   },
   {
    "fieldname": "no_of_nights",
