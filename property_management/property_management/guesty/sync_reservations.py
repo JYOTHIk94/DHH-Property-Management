@@ -21,6 +21,7 @@ PAGE_SIZE = 100
 # Guesty's list endpoint returns a sparse default field set, so request what we map.
 FIELDS = (
 	"status checkIn checkOut checkInDateLocalized checkOutDateLocalized "
+	"guestStay.status guestStay.updatedAt "
 	"plannedArrival plannedDeparture nightsCount guestsCount numberOfGuests "
 	"source integration confirmationCode listingId createdAt notes "
 	"guestsDetails "
@@ -32,14 +33,14 @@ FIELDS = (
 	"money.invoiceItems money.payments money.nightlyRates"
 )
 
-# Lifecycle status (Draft / Scheduled / Confirmed / Cancelled). Check-in/out are
+# Lifecycle status (Draft / Reserved / Awaiting Payment / Confirmed / Cancelled). Check-in/out are
 # NOT lifecycle states — a checked-in guest is still a Confirmed booking; the stay
 # status is carried separately in `guest_status` (see GUEST_STATUS_MAP).
 STATUS_MAP = {
 	"inquiry": "Draft",
-	"reserved": "Scheduled",
-	"pending": "Scheduled",
-	"awaiting_payment": "Scheduled",
+	"reserved": "Reserved",
+	"pending": "Reserved",
+	"awaiting_payment": "Awaiting Payment",
 	"confirmed": "Confirmed",
 	"checkedin": "Confirmed",
 	"checkedout": "Confirmed",
@@ -49,7 +50,10 @@ STATUS_MAP = {
 	"expired": "Cancelled",
 }
 
-# Guest *stay* status, separate from the lifecycle status above.
+# Guest *stay* status, separate from the lifecycle status above. Sourced from
+# `guestStay.status` ("checked_in"), falling back to the lifecycle status for
+# older payloads that folded the stay into it ("checkedin"). Keys are matched
+# underscore-insensitively by _map_guest_status, so both spellings land here.
 GUEST_STATUS_MAP = {
 	"checkedin": "Checkin",
 	"checkedout": "Checkout",
@@ -150,7 +154,7 @@ def upsert_one(reservation):
 		"property_id": property_name,
 		"reservation_type": "Booking",
 		"reservation_status": _map_status(reservation.get("status")),
-		"guest_status": _map_guest_status(reservation.get("status")),
+		"guest_status": _map_guest_status(reservation),
 		"confirmation_code": cstr(reservation.get("confirmationCode") or ""),
 		"reservation_check_in": getdate(check_in) if check_in else None,
 		"reservation_check_out": getdate(check_out) if check_out else None,
@@ -478,8 +482,11 @@ def _map_status(status):
 	return STATUS_MAP.get(cstr(status).strip().lower(), "Draft")
 
 
-def _map_guest_status(status):
-	return GUEST_STATUS_MAP.get(cstr(status).strip().lower(), "Not Arrived")
+def _map_guest_status(reservation):
+	"""Guest stay status from `guestStay.status`, else the lifecycle status."""
+	stay = reservation.get("guestStay") or {}
+	raw = cstr(stay.get("status") or reservation.get("status")).strip().lower()
+	return GUEST_STATUS_MAP.get(raw.replace("_", ""), "Not Arrived")
 
 
 def _map_payment_status(status):

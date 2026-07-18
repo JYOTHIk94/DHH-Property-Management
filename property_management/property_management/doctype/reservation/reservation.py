@@ -22,7 +22,7 @@ class Reservation(Document):
             self.company = frappe.db.get_single_value("Property Settings", "default_company")
 
     def on_update(self):
-        # Reservation is non-submittable. Lifecycle status (Draft/Scheduled/
+        # Reservation is non-submittable. Lifecycle status (Draft/Reserved/
         # Confirmed/Cancelled) is separate from the guest *stay* status
         # (Not Arrived/Checkin/Checkout) — the latter drives billing.
         status = self.reservation_status
