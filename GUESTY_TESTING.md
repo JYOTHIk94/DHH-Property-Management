@@ -1,3 +1,4 @@
+
 # Guesty Integration — Manual Testing Guide
 
 Step-by-step manual test plan for the Guesty → ERPNext sync.

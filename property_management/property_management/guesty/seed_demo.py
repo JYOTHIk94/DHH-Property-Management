@@ -32,18 +32,31 @@ def _guest(first):
 	}
 
 
-def _pay(amount, status, method="Card", at="2026-07-05T10:00:00Z", _id="p"):
+def _pay(amount, status, method="Card", at="2026-07-05T10:00:00Z", _id="p", desc=None):
 	return {"_id": _id, "type": ("Refund" if amount < 0 else "Payment"),
-	        "status": status, "paymentMethod": method, "amount": amount, "paidAt": at}
+	        "status": status, "paymentMethod": method, "amount": amount, "paidAt": at,
+	        "description": desc or ("Refund to guest" if amount < 0 else "Reservation payment")}
 
 
 def _items(fare, cleaning, tax=0.0, deposit=0.0):
+	"""Guesty-shaped money.invoiceItems.
+
+	Carries the five fields Guesty requires on an invoice item — title,
+	description, amount, normalType, secondIdentifier — so the seed exercises the
+	real `_folio_invoice_items` mapping rather than a reduced form of it.
+	"""
 	rows = [
-		{"_id": "acc", "title": "Accommodation fare", "amount": fare, "tax": tax},
-		{"_id": "cln", "title": "Cleaning fee", "amount": cleaning},
+		{"_id": "acc", "title": "Accommodation fare", "amount": fare, "tax": tax,
+		 "description": "Accommodation fare for the stay",
+		 "normalType": "AF", "secondIdentifier": "ACCOMMODATION"},
+		{"_id": "cln", "title": "Cleaning fee", "amount": cleaning,
+		 "description": "One-off cleaning charge",
+		 "normalType": "CF", "secondIdentifier": "CLEANING"},
 	]
 	if deposit:
-		rows.append({"_id": "dep", "title": "Security Deposit", "amount": deposit, "status": "HELD"})
+		rows.append({"_id": "dep", "title": "Security Deposit", "amount": deposit, "status": "HELD",
+		             "description": "Refundable security deposit hold",
+		             "normalType": "SD", "secondIdentifier": "SECURITY_DEPOSIT"})
 	return rows
 
 
@@ -53,6 +66,16 @@ def _nights(start_day, n, rate=1000.0, tax=50.0):
 
 def _money(fare, cleaning, paid, tax=0.0, deposit=0.0, payments=None, nightly=None):
 	total = fare + cleaning  # deposit excluded from the reservation total
+
+	# Payout economics — how the money divides AFTER the guest pays. These are
+	# host-side, never guest charges. Modelled here so the seed exercises the
+	# payout tab: 15% host commission, 5% channel commission, 5% tax on each.
+	host_commission = round(total * 0.15, 2)
+	channel_commission = round(total * 0.05, 2)
+	channel_commission_tax = round(channel_commission * 0.05, 2)
+	host_commission_inc_tax = round(host_commission * 1.05, 2)
+	owner_revenue = round(total - host_commission - channel_commission, 2)
+
 	return {
 		"currency": "AED",
 		"fareAccommodation": fare,
@@ -62,6 +85,13 @@ def _money(fare, cleaning, paid, tax=0.0, deposit=0.0, payments=None, nightly=No
 		"hostPayout": total,
 		"totalPaid": paid,
 		"balanceDue": total - paid,
+		"isFullyPaid": paid >= total,
+		"ownerRevenue": owner_revenue,
+		"hostCommission": host_commission,
+		"hostCommissionIncTax": host_commission_inc_tax,
+		"channelCommission": channel_commission,
+		"channelCommissionTax": channel_commission_tax,
+		"netIncome": round(host_commission - channel_commission_tax, 2),
 		"invoiceItems": _items(fare, cleaning, tax, deposit),
 		"payments": payments or [],
 		"nightlyRates": nightly or [],
@@ -95,10 +125,18 @@ def _scenarios():
 	]
 
 
+# Guesty's raw channel identifiers, spread across the scenarios so the demo data
+# exercises the Channel / Channel Type mapping instead of being uniformly Direct.
+CHANNELS = ["airbnb2", "bookingCom", "manual", "expedia", "homeaway2",
+            "agoda", "", "airbnb2", "tripAdvisor"]
+
+
 def run():
 	names = ["Alice", "Bob", "Carol", "Dave", "Eve", "Frank", "Grace", "Heidi", "Ivan"]
 	created = []
-	for (idx, label, status, ci, co, nights, money), guest_name in zip(_scenarios(), names):
+	for (idx, label, status, ci, co, nights, money), guest_name, channel in zip(
+		_scenarios(), names, CHANNELS
+	):
 		payload = {
 			"_id": f"{PREFIX}RES-{idx}",
 			"status": status,
@@ -110,7 +148,7 @@ def run():
 			"guestsCount": 2,
 			"guestsDetails": {"numberOfAdults": 2, "numberOfChildren": 1, "numberOfInfants": 0},
 			"guest": _guest(guest_name),
-			"source": "Direct",
+			"source": channel,
 			"createdAt": "2026-07-01T10:00:00Z",
 			"notes": label,
 			"money": money,
@@ -123,11 +161,11 @@ def run():
 	print(f"Seeded {len(created)} reservations:")
 	for idx, label, outcome, name in created:
 		r = frappe.get_doc("Reservation", name)
-		print(f"  {idx} {label:34} -> {name} | {r.reservation_status}/{r.guest_status} | "
+		print(f"  {idx} {label:30} -> {name} | {r.source}/{r.channel_type} | {r.reservation_status}/{r.guest_status} | "
 		      f"pay={r.payment_status} paid={r.total_paid_amount:.0f} due={r.outstanding_amount:.0f} "
 		      f"total={r.total_amount:.0f} deposit={r.security_deposit:.0f} | "
 		      f"acc={len(r.accommodation_fare)} night={len(r.night_fare)} "
-		      f"lines={len(r.reservation_line_items)} pmts={len(r.folio_payments)}")
+		      f"lines={len(r.reservation_line_items)} inv={len(r.invoice_items)}")
 	return {"seeded": len(created)}
 
 
