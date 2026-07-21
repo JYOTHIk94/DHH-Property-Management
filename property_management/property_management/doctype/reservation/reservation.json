@@ -13,6 +13,7 @@
   "reservation_booking_date",
   "reservation_type",
   "source",
+  "channel_type",
   "column_break_oawg",
   "reservation_link",
   "guesty_id",
@@ -65,6 +66,8 @@
   "payment_entry",
   "credit_note",
   "refund_payment_entry",
+  "invoice_items_section",
+  "invoice_items",
   "folio_payments_section",
   "reservation_line_items",
   "tab_folio",
@@ -137,11 +140,18 @@
    "options": "Booking\nInquiry\nBlocked"
   },
   {
-   "description": "Booking source / channel (e.g. Airbnb, Booking.com, Direct).",
+   "description": "Booking channel, normalised from the Guesty integration (Airbnb, Booking.com, Direct ...).",
    "fieldname": "source",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Source"
+   "label": "Channel"
+  },
+  {
+   "fieldname": "channel_type",
+   "fieldtype": "Select",
+   "label": "Channel Type",
+   "options": "\nDirect\nOTA",
+   "description": "Direct = booked with us. OTA = came through an online travel agent, which carries channel commission."
   },
   {
    "fieldname": "check_in_time",
@@ -309,7 +319,7 @@
    "in_list_view": 1,
    "in_preview": 1,
    "label": "Payment Status",
-   "options": "Unpaid\nPartly Paid\nPaid\nRefunded\nPartially Refunded\nCancelled",
+   "options": "Not Paid\nPartially Paid\nFully Paid\nRefunded\nPartially Refunded\nCancelled",
    "read_only": 1
   },
   {
@@ -544,6 +554,18 @@
    "options": "folio_currency"
   },
   {
+   "fieldname": "invoice_items_section",
+   "fieldtype": "Section Break",
+   "label": "Invoice Items"
+  },
+  {
+   "fieldname": "invoice_items",
+   "fieldtype": "Table",
+   "label": "Invoice Items",
+   "options": "Reservation Invoice Items",
+   "description": "Guest folio charges from Guesty money.invoiceItems - what the guest is charged."
+  },
+  {
    "fieldname": "folio_payments_section",
    "fieldtype": "Section Break",
    "label": "Payments"
@@ -632,7 +654,7 @@
    "read_only": 1
   },
   {
-   "description": "Held / Charged / Released \u2014 from Guesty.",
+   "description": "Held / Charged / Released — from Guesty.",
    "fieldname": "security_deposit_status",
    "fieldtype": "Data",
    "label": "Security Deposit Status",
@@ -642,7 +664,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-17 13:22:34.538918",
+ "modified": "2026-07-21 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "Property Management",
  "name": "Reservation",

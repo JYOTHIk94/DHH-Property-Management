@@ -1,0 +1,75 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-07-21 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "description",
+  "amount",
+  "currency",
+  "normal_type",
+  "second_identifier"
+ ],
+ "fields": [
+  {
+   "columns": 3,
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "description": "Guesty invoice item title (e.g. Cleaning fee, Management Fee)."
+  },
+  {
+   "columns": 5,
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Description",
+   "description": "Guesty invoice item description - the guest-facing text for this charge."
+  },
+  {
+   "columns": 2,
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount",
+   "options": "currency"
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency"
+  },
+  {
+   "fieldname": "normal_type",
+   "fieldtype": "Data",
+   "label": "Normal Type",
+   "read_only": 1,
+   "description": "Guesty charge family (AF / CF / AFE / TAX ...). Drives the ERPNext Item routing."
+  },
+  {
+   "fieldname": "second_identifier",
+   "fieldtype": "Data",
+   "label": "Second Identifier",
+   "read_only": 1,
+   "description": "Guesty machine category (MANAGEMENT / CLEANING ...). Stable key for the ERPNext Item Master."
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-07-21 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Property Management",
+ "name": "Reservation Invoice Items",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "ASC",
+ "states": []
+}

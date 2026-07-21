@@ -9,6 +9,102 @@ bump MINOR, and fixes bump PATCH.
 
 ## [Unreleased]
 
+2026-07-21
+
+Invoicing rebuilt around the **Guesty folio**: one draft invoice per stay built
+from the folio charges, dynamic Items for Guesty's fee types, and credit-note
+based refunds/cancellations. Plus channel normalisation and status-vocabulary
+alignment with Guesty.
+
+### Added
+- **Folio-driven Sales Invoice.** Check-in raises a **draft** Sales Invoice built
+  from the reservation's `invoice_items` (one line per Guesty charge, qty 1 with
+  the charge as the rate). The draft is rebuilt on every sync for the duration of
+  the stay, so added fees and corrected rates keep flowing in; checkout submits it
+  and records the payment. Invoicing is gated on `payment_status` — a Confirmed
+  but unpaid reservation raises nothing, however far into the stay it is. The
+  security deposit is skipped: it is a refundable hold, not a sale.
+- **Dynamic Items for Guesty charges** (`get_or_create_guesty_item`). Guesty fee
+  types appear without warning, so Items are created on demand under a
+  **Guesty Charges** Item Group as non-stock sales items. The item code
+  (`GSTY-<normalType>-<secondIdentifier>`) is keyed on Guesty's taxonomy, not the
+  title, so renaming a charge moves the label onto the existing Item instead of
+  minting a second one and splitting revenue reporting.
+- **Refunds and paid cancellations** (`process_refund`). Money returned by Guesty
+  raises a **Credit Note** (Sales Return) against the submitted invoice plus a
+  refund **Payment Entry** for cash actually returned. Partial refunds scale the
+  return line rates so the credit note totals exactly what was given back; both
+  documents post at today's date so a late refund lands in an open period. Guarded
+  by the `credit_note` link, so a replayed Guesty webhook cannot double-refund.
+  The refunded amount is derived from the negative payment lines on the folio
+  (Guesty has no separate refunds array).
+- **`Reservation Invoice Items` child table** and an *Invoice Items* section on
+  the Reservation — the guest folio charges from Guesty `money.invoiceItems`
+  (title, description, amount, currency, `normal_type`, `second_identifier`).
+  This is *what the guest is charged*, as distinct from `reservation_line_items`
+  (*what was actually paid*); the two do not correspond 1:1.
+- **`channel_type` (Direct / OTA)** on the Reservation, and a `CHANNEL_MAP` that
+  normalises Guesty's machine identifiers (`airbnb2`, `bookingCom`, `homeaway2`)
+  to display names (Airbnb, Booking.com, Vrbo). Only `manual`/empty is treated as
+  Direct; an unrecognised identifier is title-cased and classed as OTA rather than
+  discarded.
+- **Payment status labels** matching Guesty's UI (`SUCCEEDED` → *Approved*,
+  `PARTIALLY_REFUNDED` → *Partially Refunded*, …) on the folio payment rows, with
+  a title-case fallback for unmapped enums, so users can reconcile against Guesty.
+- **Payment `description`** on `reservation_line_items` — Guesty's name for what
+  the payment covered (display only, never a join key).
+- Guesty booking/guest fields carried on the Reservation: **Confirmation Code**,
+  **Guest Status**, **Related Reservation** (sibling of a split mid-stay move),
+  **Credit Note** and **Refund Payment Entry**.
+
+### Changed
+- **`reservation_status` vocabulary** is now Draft / **Reserved** / **Awaiting
+  Payment** / Confirmed / Cancelled (was Draft / Scheduled / …); Guesty
+  `reserved`+`pending` map to Reserved and `awaiting_payment` to Awaiting Payment.
+- **`payment_status` labels** renamed to **Not Paid / Partially Paid / Fully
+  Paid** (was Unpaid / Partly Paid / Paid), matching Guesty's wording.
+- **Payments tab reorganised:** `reservation_line_items` relabelled *Payment
+  Details* and moved under the Payments section next to the new Invoice Items
+  table; `source` relabelled **Channel**.
+- **Guesty ownership is now decided by the persisted `guesty_id`**
+  (`is_guesty_managed`), not only the transient `from_guesty` sync flag.
+- Seed/demo data (`seed_demo.py`) now emits Guesty-shaped invoice items
+  (`normalType` / `secondIdentifier` / description), payout economics, payment
+  descriptions, `isFullyPaid`, and a spread of channels, so it exercises the real
+  mappers instead of a reduced form of them.
+
+### Fixed
+- **Guesty totals were overwritten on any later save.** The authoritative-money
+  guard checked only the `from_guesty` flag, which lives just for the duration of
+  a sync call — so a user edit, a status change or a check-in silently recomputed
+  the total from the Property rate. It now checks `guesty_id`.
+- **Guest status stuck at "Not Arrived":** the stay status is read from
+  `guestStay.status` (falling back to the lifecycle status for older payloads),
+  matched underscore-insensitively so `checked_in` and `checkedin` both land.
+- **Payout section permanently empty and `isFullyPaid` never applied:** Guesty
+  returns only the fields the request asks for, and `money.channelCommission`,
+  `channelCommissionTax`, `hostCommissionIncTax`, `payout` and `isFullyPaid` were
+  missing from the `fields` string, arriving as `None` and being written as 0.
+- **Fully-paid detection** now uses Guesty's explicit `isFullyPaid`, with
+  `balanceDue` / `totalPaid` as the fallback for older payloads.
+- **Phantom advance at checkout:** the payment is capped at the invoice
+  outstanding, because Guesty's `totalPaid` can include the security deposit —
+  a hold that is deliberately left off the invoice.
+- Cancellation of a **draft** invoice now deletes it (it never reached the
+  ledger); a **submitted** invoice is reversed with a credit note rather than
+  cancelled, so the audit trail survives.
+
+### Removed
+- **Two-stage invoicing** (`create_invoice`): the advance invoice + Payment Entry
+  at check-in and the balance invoice + Payment Entry at checkout, along with the
+  rental/service split of each stage. One folio invoice per stay replaces it.
+- **`folio_payments`** (Reservation Payment) and **`scheduled_payments`** tables
+  from the Reservation — payments are now carried by *Payment Details*.
+- **`guesty_item_id` / `guesty_payment_id`** from Accommodation Fare, Reservation
+  Line Items and Reservation Payment: these child rows are rebuilt wholesale on
+  every sync, so nothing ever matched against them. Guesty line identity belongs
+  on the Sales Invoice Item and Payment Entry instead.
+
 2026-07-13
 
 Major rework of the **Reservation → invoicing → payment** flow, multi-company
@@ -97,3 +193,4 @@ support, and date-based availability.
 [Unreleased]: https://example.com/property_management/compare/v0.1.0...HEAD
 [0.1.0]: https://example.com/property_management/releases/tag/v0.1.0
 [0.0.1]: https://example.com/property_management/releases/tag/v0.0.1
+

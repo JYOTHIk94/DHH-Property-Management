@@ -28,10 +28,18 @@ FIELDS = (
 	"guest.firstName guest.lastName guest.fullName guest.email guest.phone "
 	"money.currency money.fareAccommodation money.fareCleaning money.totalTaxes "
 	"money.totalFees money.hostPayout money.balanceDue money.totalPaid "
+	"money.isFullyPaid "
 	"money.ownerRevenue money.hostCommission money.netIncome "
+	"money.hostCommissionIncTax money.channelCommission money.channelCommissionTax "
+	"money.payout "
 	"money.securityDeposit money.securityDepositFee "
 	"money.invoiceItems money.payments money.nightlyRates"
 )
+# NOTE: Guesty returns ONLY what `fields` asks for. A field the mapper reads but
+# that is missing from this string arrives as None and is silently written as 0 —
+# which is how the whole payout section (channel commission, commission inc tax)
+# and the `isFullyPaid` branch of _payment_status came to be permanently empty.
+# Adding a mapping below means adding the field here too.
 
 # Lifecycle status (Draft / Reserved / Awaiting Payment / Confirmed / Cancelled). Check-in/out are
 # NOT lifecycle states — a checked-in guest is still a Confirmed booking; the stay
@@ -62,6 +70,31 @@ GUEST_STATUS_MAP = {
 # Guesty's API returns SCREAMING_CASE payment enums (`SUCCEEDED`) while its UI
 # shows friendly labels ("Approved"). Users reconcile against the Guesty UI, so
 # store the label. Unmapped enums fall back to title-case via _map_payment_status.
+# Guesty channel identifier → (display name, Direct/OTA). Keys are matched
+# through _channel_key, so `bookingCom`, `booking.com` and `BOOKING_COM` all hit
+# the same row. Identifiers are Guesty's published channel-commission sources.
+CHANNEL_MAP = {
+	"airbnb": ("Airbnb", "OTA"),
+	"airbnb2": ("Airbnb", "OTA"),
+	"bookingcom": ("Booking.com", "OTA"),
+	"bdc": ("Booking.com", "OTA"),
+	"homeaway": ("Vrbo", "OTA"),
+	"homeaway2": ("Vrbo", "OTA"),
+	"vrbo": ("Vrbo", "OTA"),
+	"expedia": ("Expedia", "OTA"),
+	"agoda": ("Agoda", "OTA"),
+	"tripadvisor": ("TripAdvisor", "OTA"),
+	"hopper": ("Hopper", "OTA"),
+	"rentalsunited": ("Rentals United", "OTA"),
+	"despegar": ("Despegar", "OTA"),
+	"hostelworld": ("Hostelworld", "OTA"),
+	# Direct — booked with us, no channel commission.
+	"manual": ("Direct", "Direct"),
+	"direct": ("Direct", "Direct"),
+	"website": ("Direct", "Direct"),
+	"": ("Direct", "Direct"),
+}
+
 PAYMENT_STATUS_MAP = {
 	"succeeded": "Approved",
 	"authorized": "Authorized",
@@ -166,7 +199,8 @@ def upsert_one(reservation):
 		"last_name": cstr(guest.get("lastName") or ""),
 		"email_id": cstr(guest.get("email") or ""),
 		"phone_number": _clean_phone(guest.get("phone")),
-		"source": _source(reservation),
+		"source": _channel(reservation),
+		"channel_type": _channel_type(reservation),
 		"check_in_time": cstr(reservation.get("plannedArrival") or ""),
 		"check_out_time": cstr(reservation.get("plannedDeparture") or ""),
 		"notes": _notes(reservation.get("notes")),
@@ -188,9 +222,9 @@ def upsert_one(reservation):
 	if created_at:
 		values["reservation_booking_date"] = getdate(created_at)
 
+	invoice_items = _folio_invoice_items(money)
 	line_items = _folio_line_items(money)
 	accommodation_fare = _folio_accommodation_fare(money)
-	folio_payments = _folio_payments(money)
 	night_fare = _folio_night_fare(reservation, money)
 
 	name = frappe.db.get_value("Reservation", {"guesty_id": guesty_id}, "name")
@@ -201,9 +235,9 @@ def upsert_one(reservation):
 		if doc.docstatus != 0:
 			return "skipped"
 		doc.update(values)
+		doc.set("invoice_items", invoice_items)
 		doc.set("reservation_line_items", line_items)
 		doc.set("accommodation_fare", accommodation_fare)
-		doc.set("folio_payments", folio_payments)
 		doc.set("night_fare", night_fare)
 		doc.flags.from_guesty = True
 		doc.flags.ignore_mandatory = True  # guest phone may be absent
@@ -212,9 +246,9 @@ def upsert_one(reservation):
 
 	doc = frappe.new_doc("Reservation")
 	doc.update(values)
+	doc.set("invoice_items", invoice_items)
 	doc.set("reservation_line_items", line_items)
 	doc.set("accommodation_fare", accommodation_fare)
-	doc.set("folio_payments", folio_payments)
 	doc.set("night_fare", night_fare)
 	doc.guesty_id = guesty_id
 	doc.flags.from_guesty = True
@@ -263,41 +297,59 @@ def _folio_accommodation_fare(money):
 			"amount": amount,
 			"tax": tax,
 			"total": amount + tax,
-			"guesty_item_id": cstr(item.get("_id") or ""),
+		})
+	return rows
+
+
+def _folio_invoice_items(money):
+	"""Guest folio charges → `invoice_items` child (Title / Description / Amount).
+
+	Source: Guesty `money.invoiceItems` — *what the guest is charged*, as opposed
+	to `money.payments` (*what was actually paid*), which lands in
+	`reservation_line_items`. The two do not correspond 1:1.
+
+	`normal_type` / `second_identifier` are carried because they are the stable
+	keys the ERPNext Item Master is mapped on. The per-line Guesty `_id` is not
+	stored here — these rows are rebuilt wholesale on every sync, so nothing
+	matches against it. It belongs on the Sales Invoice Item, which is where a
+	Guesty line has to be recognised again on re-sync.
+	"""
+	rows = []
+	currency = _valid_currency(money.get("currency"))
+	for item in (money.get("invoiceItems") or []):
+		rows.append({
+			"title": cstr(item.get("title") or item.get("normalType") or item.get("type") or ""),
+			"description": cstr(item.get("description") or ""),
+			"amount": flt(item.get("amount") or 0),
+			"currency": currency,
+			"normal_type": cstr(item.get("normalType") or item.get("type") or ""),
+			"second_identifier": cstr(item.get("secondIdentifier") or ""),
 		})
 	return rows
 
 
 def _folio_line_items(money):
-	"""Invoice line items / transactions → `reservation_line_items` child
-	(Date / Transaction Type / Status / Payment Method / Amount).
-	Source: Guesty `money.payments`."""
+	"""Payment transactions → `reservation_line_items` child
+	(Date / Transaction Type / Description / Status / Payment Method / Amount).
+
+	Source: Guesty `money.payments` — *what was actually paid*. `description` is
+	Guesty's name for what the payment covered; it is display text only, never a
+	join key (one payment can settle several invoice items, and Guesty does not
+	guarantee the text matches any invoice item title).
+
+	The rows are rebuilt wholesale on every sync, so no per-row Guesty id is
+	carried here — payment-level idempotency belongs on the Payment Entry.
+	"""
 	rows = []
 	for p in (money.get("payments") or []):
 		paid = _parse_dt(p.get("paidAt") or p.get("createdAt"))
 		rows.append({
 			"title": getdate(paid) if paid else None,
 			"transaction_type": cstr(p.get("type") or p.get("kind") or "Payment"),
+			"description": cstr(p.get("description") or ""),
 			"status": _map_payment_status(p.get("status")),
 			"payment_method": cstr(p.get("paymentMethod") or p.get("method") or ""),
 			"amount": flt(p.get("amount") or 0),
-			"guesty_item_id": cstr(p.get("_id") or ""),
-		})
-	return rows
-
-
-def _folio_payments(money):
-	rows = []
-	currency = _valid_currency(money.get("currency"))
-	for p in (money.get("payments") or []):
-		rows.append({
-			"payment_method": cstr(p.get("paymentMethod") or p.get("method") or ""),
-			"amount": flt(p.get("amount") or 0),
-			"currency": _valid_currency(p.get("currency")) or currency,
-			"status": _map_payment_status(p.get("status")),
-			"paid_at": _parse_dt(p.get("paidAt") or p.get("createdAt")),
-			"note": cstr(p.get("note") or ""),
-			"guesty_payment_id": cstr(p.get("_id") or ""),
 		})
 	return rows
 
@@ -348,8 +400,8 @@ def _folio_night_fare(reservation, money):
 	return rows
 
 
-def _source(reservation):
-	"""Booking source / channel (e.g. Airbnb, Booking.com, Direct)."""
+def _raw_channel(reservation):
+	"""The channel identifier exactly as Guesty sends it (e.g. `airbnb2`)."""
 	integration = reservation.get("integration") or {}
 	return cstr(
 		reservation.get("source")
@@ -358,6 +410,40 @@ def _source(reservation):
 		or reservation.get("channel")
 		or ""
 	)
+
+
+def _channel(reservation):
+	"""Booking channel → the display name shown on the Reservation.
+
+	Guesty sends machine identifiers (`airbnb2`, `bookingCom`), which cannot be
+	grouped or reported on as-is. An unrecognised identifier is title-cased
+	rather than discarded, so a channel Guesty adds later still lands somewhere
+	sensible instead of vanishing.
+	"""
+	raw = _raw_channel(reservation)
+	known = CHANNEL_MAP.get(_channel_key(raw))
+	if known:
+		return known[0]
+	return raw.replace("_", " ").title() if raw else "Direct"
+
+
+def _channel_type(reservation):
+	"""Direct or OTA — decides whether channel commission applies.
+
+	Only `manual` and an empty value are genuinely direct; everything else
+	Guesty reports is one of its channel integrations, so an unknown identifier
+	defaults to OTA.
+	"""
+	raw = _raw_channel(reservation)
+	known = CHANNEL_MAP.get(_channel_key(raw))
+	if known:
+		return known[1]
+	return "OTA" if raw else "Direct"
+
+
+def _channel_key(raw):
+	"""Normalise for lookup: case-, dot- and underscore-insensitive."""
+	return re.sub(r"[^a-z0-9]", "", cstr(raw).lower())
 
 
 def _notes(notes):
@@ -459,7 +545,7 @@ def _payment_status(money):
 	"""Derive the ERPNext payment status from Guesty money.
 
 	Refund state is detected from a negative net or a refund line in payments;
-	otherwise driven by balanceDue / totalPaid.
+	otherwise driven by isFullyPaid, falling back to balanceDue / totalPaid.
 	"""
 	paid = flt(money.get("totalPaid") or 0)
 	balance = flt(money.get("balanceDue") or 0)
@@ -472,10 +558,14 @@ def _payment_status(money):
 		# Some money was returned. Fully refunded when nothing net remains paid.
 		return "Refunded" if paid <= 0 else "Partially Refunded"
 	if paid <= 0:
-		return "Unpaid"
+		return "Not Paid"
+	# Guesty states paid-in-full explicitly; balanceDue is the fallback for
+	# older payloads that predate the flag.
+	if money.get("isFullyPaid"):
+		return "Fully Paid"
 	if balance > 0:
-		return "Partly Paid"
-	return "Paid"
+		return "Partially Paid"
+	return "Fully Paid"
 
 
 def _map_status(status):
