@@ -18,6 +18,9 @@ from property_management.property_management.guesty import client, sync_listings
 
 PAGE_SIZE = 100
 
+# Frappe Data field capacity — over-long values raise instead of truncating.
+DATA_FIELD_LIMIT = 140
+
 # Guesty's list endpoint returns a sparse default field set, so request what we map.
 FIELDS = (
 	"status checkIn checkOut checkInDateLocalized checkOutDateLocalized "
@@ -293,7 +296,7 @@ def _folio_accommodation_fare(money):
 		amount = flt(item.get("amount") or 0)
 		tax = flt(item.get("tax") or item.get("amountTax") or 0)
 		rows.append({
-			"item": cstr(item.get("title") or item.get("normalType") or item.get("type") or ""),
+			"item": _short(item.get("title") or item.get("normalType") or item.get("type")),
 			"amount": amount,
 			"tax": tax,
 			"total": amount + tax,
@@ -318,12 +321,12 @@ def _folio_invoice_items(money):
 	currency = _valid_currency(money.get("currency"))
 	for item in (money.get("invoiceItems") or []):
 		rows.append({
-			"title": cstr(item.get("title") or item.get("normalType") or item.get("type") or ""),
+			"title": _short(item.get("title") or item.get("normalType") or item.get("type")),
 			"description": cstr(item.get("description") or ""),
 			"amount": flt(item.get("amount") or 0),
 			"currency": currency,
-			"normal_type": cstr(item.get("normalType") or item.get("type") or ""),
-			"second_identifier": cstr(item.get("secondIdentifier") or ""),
+			"normal_type": _short(item.get("normalType") or item.get("type")),
+			"second_identifier": _short(item.get("secondIdentifier")),
 		})
 	return rows
 
@@ -345,10 +348,10 @@ def _folio_line_items(money):
 		paid = _parse_dt(p.get("paidAt") or p.get("createdAt"))
 		rows.append({
 			"title": getdate(paid) if paid else None,
-			"transaction_type": cstr(p.get("type") or p.get("kind") or "Payment"),
-			"description": cstr(p.get("description") or ""),
-			"status": _map_payment_status(p.get("status")),
-			"payment_method": cstr(p.get("paymentMethod") or p.get("method") or ""),
+			"transaction_type": _short(p.get("type") or p.get("kind") or "Payment"),
+			"description": _short(p.get("description")),
+			"status": _short(_map_payment_status(p.get("status"))),
+			"payment_method": _short(p.get("paymentMethod") or p.get("method")),
 			"amount": flt(p.get("amount") or 0),
 		})
 	return rows
@@ -456,6 +459,16 @@ def _notes(notes):
 	if isinstance(notes, list):
 		return "\n".join(cstr(n) for n in notes if n)
 	return ""
+
+
+def _short(value, limit=DATA_FIELD_LIMIT):
+	"""Trim to what a Data field holds.
+
+	Frappe *raises* on an over-long Data value rather than truncating, so a single
+	verbose Guesty title — they are free text — would otherwise abort the whole
+	reservation sync.
+	"""
+	return cstr(value or "").strip()[:limit]
 
 
 def _valid_currency(code):

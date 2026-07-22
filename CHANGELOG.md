@@ -68,12 +68,41 @@ alignment with Guesty.
   table; `source` relabelled **Channel**.
 - **Guesty ownership is now decided by the persisted `guesty_id`**
   (`is_guesty_managed`), not only the transient `from_guesty` sync flag.
+- **Staged billing seed data** (`seed_demo.run_billing`, scenarios 10-20): each
+  scenario replays a booking's Guesty webhook sequence (confirmed → checked in →
+  checked out → refunded / cancelled) through `upsert_one`, so the **Sales
+  Invoices, Payment Entries and Credit Notes are raised by the real
+  `on_update` hooks** rather than built by the seed. Covers the billing gate
+  (checked in but unpaid → no invoice), an unpaid checkout, the deposit cap, a fee
+  added mid-stay, partial and full refunds, and cancellation before and after
+  posting. `seed_demo.run_manual` (scenario 21) covers the non-Guesty path — a
+  reservation keyed in by hand, checked in and out. `cleanup` now cancels and
+  deletes those documents (payments, then returns, then the original invoices)
+  and the seed customers.
 - Seed/demo data (`seed_demo.py`) now emits Guesty-shaped invoice items
   (`normalType` / `secondIdentifier` / description), payout economics, payment
   descriptions, `isFullyPaid`, and a spread of channels, so it exercises the real
   mappers instead of a reduced form of them.
 
 ### Fixed
+- **Checkout raised no invoice and no Payment Entry for a reservation without a
+  Guesty folio.** The folio-driven flow billed from `invoice_items`, which a
+  reservation keyed in by hand never has, and gated invoicing on a
+  `payment_status` that is itself derived from Payment Entries that do not exist
+  yet — so a manual booking could be checked in and out and produce nothing.
+  Invoice lines now fall back to the reservation's own amounts
+  (`get_rate_card_items`: rental item by nights + management fee), and the
+  payment gate (`is_billable`) applies only to Guesty-managed reservations.
+- **An unpaid stay produced no invoice at checkout.** The gate that (correctly)
+  withholds a mid-stay invoice from an unpaid booking also blocked it at
+  departure. Checkout now always posts the invoice — the stay happened, so the
+  charge is real — and raises a Payment Entry only for what was actually
+  collected, leaving the balance outstanding on the invoice.
+- **`payment_status` stuck at "Partially Paid" after full settlement:**
+  outstanding was measured against the reservation's unrounded total while
+  ERPNext settles against the invoice's *rounded* total, so a few fils of
+  rounding left a fully-paid stay reading as partly paid. A posted invoice is now
+  the source of truth for the outstanding amount.
 - **Guesty totals were overwritten on any later save.** The authoritative-money
   guard checked only the `from_guesty` flag, which lives just for the duration of
   a sync call — so a user edit, a status change or a check-in silently recomputed

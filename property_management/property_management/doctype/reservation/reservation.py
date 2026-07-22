@@ -1,20 +1,16 @@
 # Copyright (c) 2026, Jyothi and contributors
 # For license information, please see license.txt
 
-import re
-
 import frappe
 from frappe.model.document import Document
 from frappe.utils import getdate, today, nowdate, flt, cint
 
-# Item Group that every auto-created Guesty charge lands in, so the dynamic
-# items stay visibly separate from the hand-maintained Item Master.
-GUESTY_ITEM_GROUP = "Guesty Charges"
+# Guesty charges are services, so they land in the standard Services group
+# alongside the rest of the hand-maintained service items.
+GUESTY_ITEM_GROUP = "Services"
 
-
-def _slug(value):
-    """Uppercase, punctuation-free token safe for an Item code."""
-    return re.sub(r"[^A-Za-z0-9]+", "-", str(value or "")).strip("-").upper()
+# Item code / name length limit in Frappe.
+ITEM_NAME_LIMIT = 140
 
 
 def _is_security_deposit(row):
@@ -24,44 +20,48 @@ def _is_security_deposit(row):
 
 
 def guesty_item_code(row):
-    """Deterministic Item code for a Guesty charge.
+    """Item code for a Guesty charge — the charge title itself.
 
-    Keyed on Guesty's own taxonomy — `normal_type` (charge family) plus
-    `second_identifier` (machine category) — rather than on the title. The title
-    is the human label: renaming "Cleaning fee" to "Cleaning & linen" must not
-    mint a second Item and split the revenue reporting in two. Title is used
-    only when Guesty sends no `second_identifier`.
+    The title is what the guest, the folio and the invoice all call the charge, so
+    it is used verbatim as both the code and the name: "Cleaning fee" on the folio
+    is item `Cleaning fee` on the invoice, with nothing to translate between them.
+    Falls back to Guesty's machine category when a charge arrives untitled.
     """
-    family = _slug(row.get("normal_type")) or "OTHER"
-    label = _slug(row.get("second_identifier")) or _slug(row.get("title")) or "CHARGE"
-    return f"GSTY-{family}-{label}"[:140]
+    title = str(row.get("title") or "").strip()
+    if not title:
+        title = str(row.get("second_identifier") or row.get("normal_type") or "").strip()
+    return (title or "Guesty Charge")[:ITEM_NAME_LIMIT]
 
 
 def get_or_create_guesty_item(row):
     """Resolve a Guesty folio line to an ERPNext Item, creating it if new.
 
-    Guesty charges are **dynamic** — new fee types appear without warning — so
-    the Item cannot be a fixed pre-built list. An existing Item is always reused;
-    a second Item for the same charge type is never created. `item_code` is the
-    identity key, so uniqueness is guaranteed by the primary key itself.
+    Guesty charges are **dynamic** — new fee types appear without warning — so the
+    Item cannot be a fixed pre-built list. An existing Item is always reused and a
+    duplicate is never created: the charge title is matched first against
+    `item_code`, then against `item_name`, so a charge whose name is already in the
+    Item Master under a different code (an item created by hand, or by a naming
+    series) is picked up rather than duplicated.
+
+    Only when neither matches is an Item created, code and name both being the
+    title, under the Services group.
     """
     code = guesty_item_code(row)
 
     if frappe.db.exists("Item", code):
-        # Follow a Guesty rename: the label moves, the Item and its history stay.
-        title = (row.get("title") or "")[:140]
-        if title and frappe.db.get_value("Item", code, "item_name") != title:
-            frappe.db.set_value("Item", code, "item_name", title)
         return code
 
-    _ensure_guesty_item_group()
+    # Same charge already in the Item Master under a different code — use it.
+    existing = frappe.db.get_value("Item", {"item_name": code}, "name")
+    if existing:
+        return existing
 
     item = frappe.get_doc({
         "doctype": "Item",
         "item_code": code,
-        "item_name": (row.get("title") or code)[:140],
-        "description": row.get("description") or row.get("title") or code,
-        "item_group": GUESTY_ITEM_GROUP,
+        "item_name": code,
+        "description": row.get("description") or code,
+        "item_group": _item_group(),
         "stock_uom": "Nos",
         "is_stock_item": 0,      # a service charge never touches inventory
         "is_sales_item": 1,
@@ -72,25 +72,17 @@ def get_or_create_guesty_item(row):
     try:
         item.insert()
     except frappe.DuplicateEntryError:
-        # Another worker created it between the exists() check and the insert.
+        # Another worker created it between the lookup and the insert.
         pass
 
     return code
 
 
-def _ensure_guesty_item_group():
+def _item_group():
+    """Services, or any leaf group when a site does not carry the standard one."""
     if frappe.db.exists("Item Group", GUESTY_ITEM_GROUP):
-        return
-    parent = frappe.db.get_value("Item Group", {"is_group": 1, "parent_item_group": ""}, "name") \
-        or "All Item Groups"
-    group = frappe.get_doc({
-        "doctype": "Item Group",
-        "item_group_name": GUESTY_ITEM_GROUP,
-        "parent_item_group": parent,
-        "is_group": 0,
-    })
-    group.flags.ignore_permissions = True
-    group.insert()
+        return GUESTY_ITEM_GROUP
+    return frappe.db.get_value("Item Group", {"is_group": 0}, "name") or "All Item Groups"
 
 
 class Reservation(Document):
@@ -359,8 +351,11 @@ class Reservation(Document):
     def process_checkout(self):
         """Checkout: submit the draft invoice, then record what the guest paid."""
         # Pick up any last folio change, and create the invoice now if check-in
-        # never fired (e.g. a same-day stay synced straight to Checkout).
-        self.sync_draft_invoice(create=True)
+        # never fired (a same-day stay synced straight to Checkout, or a stay
+        # whose money only arrived at the end). `force` because the stay is over:
+        # the charge is real whether or not payment came in, so checkout is never
+        # gated on the payment status the way check-in is.
+        self.sync_draft_invoice(create=True, force=True)
 
         if not self.sales_invoice:
             return
@@ -377,12 +372,17 @@ class Reservation(Document):
         if self.payment_entry:
             return
 
-        # Guesty is authoritative for what was actually collected. Cap it at the
-        # invoice outstanding: Guesty's totalPaid can include the security
-        # deposit, which is a hold and was deliberately left off the invoice —
-        # paying it against the invoice would post a phantom advance.
         si.reload()
-        paid = min(flt(self.total_paid_amount or 0), flt(si.outstanding_amount or 0))
+        outstanding = flt(si.outstanding_amount or 0)
+
+        # What the guest actually paid. Guesty is authoritative when it owns the
+        # reservation; a reservation keyed in by hand has no folio to read from,
+        # so it is settled in full at departure (what the pre-Guesty flow did with
+        # its balance payment). Capped at the invoice outstanding either way:
+        # Guesty's totalPaid can include the security deposit, a hold deliberately
+        # left off the invoice — paying it in would post a phantom advance.
+        collected = flt(self.total_paid_amount or 0) if self.is_guesty_managed() else outstanding
+        paid = min(collected, outstanding)
         if paid <= 0:
             return
 
@@ -394,11 +394,12 @@ class Reservation(Document):
     # Sales Invoice built from the Guesty folio
     # ------------------------------------------------------------------
 
-    # A Sales Invoice is raised only once money has actually moved. A Confirmed
-    # but unpaid reservation produces nothing, however far into the stay it is.
+    # Mid-stay, a Guesty invoice is raised only once money has actually moved: a
+    # Confirmed but unpaid reservation produces nothing while the stay runs. At
+    # checkout the invoice is raised regardless — see process_checkout.
     BILLABLE_PAYMENT_STATUSES = ("Partially Paid", "Fully Paid")
 
-    def sync_draft_invoice(self, create=False):
+    def sync_draft_invoice(self, create=False, force=False):
         """Keep the draft Sales Invoice in step with `invoice_items`.
 
         Guesty owns the folio, so the invoice is rebuilt from it rather than
@@ -408,6 +409,7 @@ class Reservation(Document):
         note instead.
 
         `create=True` additionally raises the invoice when none exists yet.
+        `force=True` skips the payment gate — used at checkout.
         """
         existing = self.sales_invoice and frappe.db.exists("Sales Invoice", self.sales_invoice)
         if not existing and not create:
@@ -418,7 +420,7 @@ class Reservation(Document):
             if si.docstatus != 0:  # submitted or cancelled — immutable
                 return si
         else:
-            if self.payment_status not in self.BILLABLE_PAYMENT_STATUSES:
+            if not force and not self.is_billable():
                 return None
             si = None
 
@@ -449,6 +451,20 @@ class Reservation(Document):
         si.save()
         return si
 
+    def is_billable(self):
+        """Whether a mid-stay invoice may be raised for this reservation.
+
+        Guesty tells us what has been collected, so a Guesty booking is billed
+        only once money has moved — a Confirmed but unpaid stay produces nothing.
+        A reservation keyed in by hand has no folio and no Guesty payment status
+        (its `payment_status` is derived from Payment Entries that do not exist
+        yet), so gating it the same way would mean it is never invoiced at all;
+        it is billable as soon as it carries an amount.
+        """
+        if self.is_guesty_managed():
+            return self.payment_status in self.BILLABLE_PAYMENT_STATUSES
+        return bool(self.get_invoice_items())
+
     def get_invoice_items(self):
         """Guesty folio charges → Sales Invoice item rows.
 
@@ -458,6 +474,7 @@ class Reservation(Document):
         would not survive being forced into qty = nights.
 
         The security deposit is skipped — it is a refundable hold, not a sale.
+        Falls back to the reservation's own amounts when there is no folio.
         """
         rows = []
         for row in (self.invoice_items or []):
@@ -471,6 +488,31 @@ class Reservation(Document):
                 "qty": 1,
                 "rate": amount,
             })
+        return rows or self.get_rate_card_items()
+
+    def get_rate_card_items(self):
+        """Invoice lines for a reservation with no Guesty folio.
+
+        A reservation created by hand in ERPNext carries no `invoice_items`, so it
+        is billed from its own amounts: the rental item — Short or Long Term by the
+        recorded nights — plus the management fee as a separate service line, the
+        same two lines the pre-Guesty flow raised.
+        """
+        rental = flt(self.reservation_item or 0)
+        service = flt(self.reservation_management_fee or 0)
+        if rental <= 0 and service <= 0:
+            return []
+
+        nights = cint(self.no_of_nights)
+        if not nights and self.reservation_check_in and self.reservation_check_out:
+            nights = (getdate(self.reservation_check_out) - getdate(self.reservation_check_in)).days
+        item_code = "Long Term Rental" if nights > 10 else "Short Term Rental"
+
+        rows = []
+        if rental > 0:
+            rows.append({"item_code": item_code, "qty": 1, "rate": rental})
+        if service > 0:
+            rows.append({"item_code": "Service item", "qty": 1, "rate": service})
         return rows
 
     def calculate_total_amount(self):
@@ -718,6 +760,15 @@ class Reservation(Document):
                 collected += flt(pe.paid_amount)
 
         outstanding = total - collected
+
+        # Once the invoice has posted it is the source of truth: ERPNext settles
+        # against the *rounded* total, so measuring against the reservation's own
+        # unrounded total left a fully-settled stay reading "Partially Paid" over
+        # a few fils of rounding.
+        si = self.get_sales_invoice()
+        if si and si.docstatus == 1:
+            outstanding = flt(si.outstanding_amount)
+
         self.db_set("outstanding_amount", outstanding)
         self.db_set("total_paid_amount", collected)
 
